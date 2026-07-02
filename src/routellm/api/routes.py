@@ -50,6 +50,7 @@ async def create_or_update_policy(policy: RoutingPolicy) -> RoutingPolicy:
 async def replay_default_benchmark() -> ReplaySummaryResponse:
     summary = await replay_service.run_default_benchmark()
     return ReplaySummaryResponse(
+        dataset_name=summary.dataset_name,
         requests_replayed=summary.requests_replayed,
         average_estimated_cost_usd=summary.average_estimated_cost_usd,
         selected_models=summary.selected_models,
