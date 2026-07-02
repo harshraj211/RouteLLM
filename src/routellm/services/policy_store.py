@@ -35,3 +35,7 @@ class InMemoryPolicyStore:
 
     def list_policies(self) -> list[RoutingPolicy]:
         return list(self.policies.values())
+
+    def upsert_policy(self, policy: RoutingPolicy) -> RoutingPolicy:
+        self.policies[policy.key] = policy
+        return policy
