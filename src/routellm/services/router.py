@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 from time import perf_counter
 
 from routellm.db.session import get_session
@@ -12,6 +14,7 @@ from routellm.schemas.routing import (
     RouteUsage,
 )
 from routellm.services.analyzer import RequestAnalyzer
+from routellm.services.budget import BudgetExceededError, BudgetService
 from routellm.services.execution import ExecutionService
 from routellm.services.policy import PolicyEngine
 from routellm.services.registry import InMemoryModelRegistry
@@ -22,6 +25,7 @@ class RoutingService:
     def __init__(self, model_registry: InMemoryModelRegistry) -> None:
         self.model_registry = model_registry
         self.analyzer = RequestAnalyzer()
+        self.budget_service = BudgetService()
         self.policy_engine = PolicyEngine()
         self.scorer = CandidateScorer()
         self.execution_service = ExecutionService()
@@ -37,10 +41,9 @@ class RoutingService:
             key=lambda model: self.scorer.score(model, analysis),
             reverse=True,
         )
-        selected = ranked[0]
-
-        estimated_cost = self._estimate_cost(
-            selected,
+        selected, estimated_cost = self._select_affordable_candidate(
+            ranked,
+            request.max_budget_usd,
             analysis.estimated_input_tokens,
             analysis.estimated_output_tokens,
         )
@@ -89,16 +92,28 @@ class RoutingService:
         self._persist_decision(request, response)
         return response
 
-    @staticmethod
-    def _estimate_cost(
-        model: ModelDescriptor,
+    def _select_affordable_candidate(
+        self,
+        ranked: list[ModelDescriptor],
+        max_budget_usd: float,
         estimated_input_tokens: int,
         estimated_output_tokens: int,
-    ) -> float:
-        return round(
-            (estimated_input_tokens * model.pricing.input_cost_per_1k_tokens / 1000)
-            + (estimated_output_tokens * model.pricing.output_cost_per_1k_tokens / 1000),
-            6,
+    ) -> tuple[ModelDescriptor, float]:
+        for model in ranked:
+            try:
+                estimated_cost = self.budget_service.ensure_within_budget(
+                    model,
+                    estimated_input_tokens=estimated_input_tokens,
+                    estimated_output_tokens=estimated_output_tokens,
+                    max_budget_usd=max_budget_usd,
+                )
+                return model, estimated_cost
+            except BudgetExceededError:
+                continue
+
+        raise HTTPException(
+            status_code=400,
+            detail="No candidate model satisfies the request budget.",
         )
 
     @staticmethod
