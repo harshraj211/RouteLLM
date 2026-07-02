@@ -6,6 +6,7 @@ from routellm.db.session import get_session
 from routellm.observability.metrics import ACTIVE_REQUESTS
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
 from routellm.schemas.budget import TenantBudgetSnapshot
+from routellm.schemas.health import ModelHealthSnapshot
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.policies import RoutingPolicy
 from routellm.schemas.replay import ReplaySummaryResponse
@@ -17,6 +18,7 @@ from routellm.schemas.routing import (
 )
 from routellm.services.policy_store import InMemoryPolicyStore
 from routellm.services.registry import InMemoryModelRegistry
+from routellm.services.model_health import ModelHealthService
 from routellm.services.replay_service import ReplayService
 from routellm.services.router import RoutingService
 
@@ -25,6 +27,7 @@ registry = InMemoryModelRegistry.bootstrap_defaults()
 policy_store = InMemoryPolicyStore.bootstrap_defaults()
 router_service = RoutingService(model_registry=registry)
 replay_service = ReplayService(router_service)
+model_health_service = ModelHealthService()
 
 
 @api_router.get("/healthz", response_model=HealthResponse, tags=["system"])
@@ -35,6 +38,11 @@ async def healthcheck() -> HealthResponse:
 @api_router.get("/models", response_model=list[ModelDescriptor], tags=["models"])
 async def list_models() -> list[ModelDescriptor]:
     return registry.list_models()
+
+
+@api_router.get("/models/health", response_model=list[ModelHealthSnapshot], tags=["models"])
+async def list_model_health() -> list[ModelHealthSnapshot]:
+    return model_health_service.summarize(registry.list_models())
 
 
 @api_router.get("/policies", response_model=list[RoutingPolicy], tags=["policies"])
