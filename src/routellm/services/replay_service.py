@@ -10,4 +10,4 @@ class ReplayService:
 
     async def run_default_benchmark(self) -> ReplaySummary:
         requests = load_requests_from_json(DEFAULT_BENCHMARK_DATASET)
-        return await self.runner.run(requests)
+        return await self.runner.run(requests, dataset_name=DEFAULT_BENCHMARK_DATASET.stem)
