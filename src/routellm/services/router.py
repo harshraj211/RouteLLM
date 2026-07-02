@@ -19,6 +19,7 @@ from routellm.services.execution import ExecutionService
 from routellm.services.policy import PolicyEngine
 from routellm.services.registry import InMemoryModelRegistry
 from routellm.services.scoring import CandidateScorer
+from routellm.workflows.routing import RoutingWorkflow
 
 
 class RoutingService:
@@ -29,18 +30,15 @@ class RoutingService:
         self.policy_engine = PolicyEngine()
         self.scorer = CandidateScorer()
         self.execution_service = ExecutionService()
+        self.workflow = RoutingWorkflow(self.analyzer, self.policy_engine, self.scorer)
 
     async def route(self, request: RouteRequest) -> RouteResponse:
         started_at = perf_counter()
-        analysis = self.analyzer.analyze(request)
         models = self.model_registry.list_models()
-        policy = self.policy_engine.select_candidates(request, analysis, models)
-
-        ranked = sorted(
-            policy.candidates,
-            key=lambda model: self.scorer.score(model, analysis),
-            reverse=True,
-        )
+        workflow_state = self.workflow.run(request, models)
+        analysis = workflow_state["analysis"]
+        policy = workflow_state["policy"]
+        ranked = workflow_state["ranked_candidates"]
         selected, estimated_cost = self._select_affordable_candidate(
             ranked,
             request.max_budget_usd,
