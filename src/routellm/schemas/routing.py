@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from routellm.schemas.escalation import EscalationAttempt
 from routellm.schemas.evaluation import EvaluationResult
 
 
@@ -50,7 +51,7 @@ class RouteResponse(BaseModel):
     decision: RouteDecision
     evaluation: EvaluationResult
     usage: RouteUsage
-    escalation_path: list[str]
+    escalation_path: list[EscalationAttempt]
     output: RouteOutput
 
 
