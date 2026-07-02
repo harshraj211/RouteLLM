@@ -12,6 +12,7 @@ from routellm.schemas.routing import (
     RouteUsage,
 )
 from routellm.services.analyzer import RequestAnalyzer
+from routellm.services.execution import ExecutionService
 from routellm.services.policy import PolicyEngine
 from routellm.services.registry import InMemoryModelRegistry
 from routellm.services.scoring import CandidateScorer
@@ -23,6 +24,7 @@ class RoutingService:
         self.analyzer = RequestAnalyzer()
         self.policy_engine = PolicyEngine()
         self.scorer = CandidateScorer()
+        self.execution_service = ExecutionService()
 
     async def route(self, request: RouteRequest) -> RouteResponse:
         started_at = perf_counter()
@@ -42,7 +44,7 @@ class RoutingService:
             analysis.estimated_input_tokens,
             analysis.estimated_output_tokens,
         )
-        response_text = self._build_placeholder_response(request, selected)
+        response_text = await self.execution_service.invoke(request, selected)
         latency_seconds = perf_counter() - started_at
 
         REQUEST_COUNTER.labels(
@@ -97,13 +99,6 @@ class RoutingService:
             (estimated_input_tokens * model.pricing.input_cost_per_1k_tokens / 1000)
             + (estimated_output_tokens * model.pricing.output_cost_per_1k_tokens / 1000),
             6,
-        )
-
-    @staticmethod
-    def _build_placeholder_response(request: RouteRequest, model: ModelDescriptor) -> str:
-        return (
-            f"RouteLLM selected '{model.key}' for task '{request.task_type}' "
-            f"under budget ${request.max_budget_usd:.4f}."
         )
 
     @staticmethod
