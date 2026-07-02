@@ -1,0 +1,47 @@
+[
+  {
+    "tenant_id": "demo",
+    "workflow_id": "support-bot",
+    "task_type": "qa",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Summarize the refund policy in three short bullets."
+      }
+    ],
+    "max_budget_usd": 0.01,
+    "latency_slo_ms": 2000,
+    "safety_tier": "low",
+    "response_format": "text"
+  },
+  {
+    "tenant_id": "demo",
+    "workflow_id": "ops-extract",
+    "task_type": "extraction",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Extract the customer name, invoice id, and due date as JSON."
+      }
+    ],
+    "max_budget_usd": 0.02,
+    "latency_slo_ms": 2500,
+    "safety_tier": "medium",
+    "response_format": "json"
+  },
+  {
+    "tenant_id": "demo",
+    "workflow_id": "code-assist",
+    "task_type": "codegen",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Generate a safe SQL migration plan for adding an indexed status column."
+      }
+    ],
+    "max_budget_usd": 0.05,
+    "latency_slo_ms": 3000,
+    "safety_tier": "high",
+    "response_format": "text"
+  }
+]
