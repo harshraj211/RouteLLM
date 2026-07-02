@@ -15,6 +15,7 @@ from routellm.schemas.routing import (
 )
 from routellm.services.analyzer import RequestAnalyzer
 from routellm.services.budget import BudgetExceededError, BudgetService
+from routellm.services.evaluation import ResponseEvaluator
 from routellm.services.execution import ExecutionService
 from routellm.services.policy import PolicyEngine
 from routellm.services.registry import InMemoryModelRegistry
@@ -27,6 +28,7 @@ class RoutingService:
         self.model_registry = model_registry
         self.analyzer = RequestAnalyzer()
         self.budget_service = BudgetService()
+        self.evaluator = ResponseEvaluator()
         self.policy_engine = PolicyEngine()
         self.scorer = CandidateScorer()
         self.execution_service = ExecutionService()
@@ -46,6 +48,7 @@ class RoutingService:
             analysis.estimated_output_tokens,
         )
         response_text = await self.execution_service.invoke(request, selected)
+        evaluation = self.evaluator.evaluate(request, selected, response_text)
         latency_seconds = perf_counter() - started_at
 
         REQUEST_COUNTER.labels(
@@ -63,7 +66,7 @@ class RoutingService:
             workflow_id=request.workflow_id,
             selected_model=selected.key,
         ).observe(estimated_cost)
-        if len(ranked) > 1 and selected.quality_tier > ranked[-1].quality_tier:
+        if not evaluation.accepted:
             ESCALATION_COUNTER.labels(
                 task_type=request.task_type,
                 workflow_id=request.workflow_id,
@@ -73,12 +76,13 @@ class RoutingService:
             request_id=request.request_id,
             decision=RouteDecision(
                 selected_model=selected.key,
-                reason_codes=policy.reason_codes + ["BEST_SCORE_SELECTED"],
+                reason_codes=policy.reason_codes + ["BEST_SCORE_SELECTED"] + evaluation.reason_codes,
                 estimated_input_tokens=analysis.estimated_input_tokens,
                 estimated_output_tokens=analysis.estimated_output_tokens,
                 estimated_cost_usd=estimated_cost,
                 estimated_latency_ms=selected.latency.p95_ms,
             ),
+            evaluation=evaluation,
             usage=RouteUsage(
                 input_tokens=analysis.estimated_input_tokens,
                 output_tokens=min(analysis.estimated_output_tokens, 120),
