@@ -2,6 +2,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from routellm.schemas.evaluation import EvaluationResult
+
 
 class HealthResponse(BaseModel):
     status: str
@@ -46,6 +48,7 @@ class RouteOutput(BaseModel):
 class RouteResponse(BaseModel):
     request_id: str
     decision: RouteDecision
+    evaluation: EvaluationResult
     usage: RouteUsage
     escalation_path: list[str]
     output: RouteOutput
