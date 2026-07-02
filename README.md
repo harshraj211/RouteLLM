@@ -29,6 +29,24 @@ RouteLLM acts like a control plane for inference:
 
 The repository is being built from the ground up. The first milestone is a working FastAPI router with model registry, policy engine, and route decision logging.
 
+## Quick Start
+
+```bash
+python -m pip install -e ".[dev]"
+uvicorn routellm.main:app --reload
+```
+
+Open:
+
+- `http://localhost:8000/docs`
+- `http://localhost:8000/v1/metrics`
+
+To boot the local platform stack:
+
+```bash
+docker compose up
+```
+
 ## Repository Structure
 
 ```text
