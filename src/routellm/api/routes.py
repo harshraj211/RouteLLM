@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
@@ -92,5 +92,31 @@ async def list_decisions(limit: int = 50) -> list[RoutingDecisionRecordResponse]
             )
             for record in records
         ]
+    finally:
+        session.close()
+
+
+@api_router.get("/decisions/{decision_id}", response_model=RoutingDecisionRecordResponse, tags=["routing"])
+async def get_decision(decision_id: int) -> RoutingDecisionRecordResponse:
+    session = get_session()
+    try:
+        record = RoutingDecisionRepository(session).get_by_id(decision_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Routing decision not found.")
+
+        return RoutingDecisionRecordResponse(
+            id=record.id,
+            request_id=record.request_id,
+            tenant_id=record.tenant_id,
+            workflow_id=record.workflow_id,
+            task_type=record.task_type,
+            selected_model=record.selected_model,
+            reason_codes=record.reason_codes.split(","),
+            estimated_input_tokens=record.estimated_input_tokens,
+            estimated_output_tokens=record.estimated_output_tokens,
+            estimated_cost_usd=record.estimated_cost_usd,
+            actual_cost_usd=record.actual_cost_usd,
+            estimated_latency_ms=record.estimated_latency_ms,
+        )
     finally:
         session.close()
