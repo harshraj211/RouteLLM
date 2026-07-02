@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./routellm.db"
     redis_url: str = "redis://localhost:6379/0"
     enable_docs: bool = True
+    otel_enabled: bool = False
+    otel_service_name: str = "routellm-api"
+    otel_exporter_otlp_endpoint: str | None = None
 
     model_config = SettingsConfigDict(env_prefix="ROUTELLM_", extra="ignore")
 
