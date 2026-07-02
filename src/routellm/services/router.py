@@ -21,6 +21,7 @@ from routellm.services.execution import ExecutionService
 from routellm.services.policy import PolicyEngine
 from routellm.services.registry import InMemoryModelRegistry
 from routellm.services.scoring import CandidateScorer
+from routellm.services.tenant_budgets import InMemoryTenantBudgetLedger
 from routellm.workflows.routing import RoutingWorkflow
 
 
@@ -33,6 +34,7 @@ class RoutingService:
         self.policy_engine = PolicyEngine()
         self.scorer = CandidateScorer()
         self.execution_service = ExecutionService()
+        self.budget_ledger = InMemoryTenantBudgetLedger()
         self.workflow = RoutingWorkflow(self.analyzer, self.policy_engine, self.scorer)
 
     async def route(self, request: RouteRequest) -> RouteResponse:
@@ -120,6 +122,7 @@ class RoutingService:
             escalation_path=escalation_path,
             output=RouteOutput(text=response_text),
         )
+        self.budget_ledger.record_spend(request.tenant_id, response.usage.actual_cost_usd)
         self._persist_decision(request, response)
         return response
 
