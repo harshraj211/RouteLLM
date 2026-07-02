@@ -1,3 +1,6 @@
+from time import perf_counter
+
+from routellm.observability.metrics import ESCALATION_COUNTER, REQUEST_COST, REQUEST_COUNTER, REQUEST_LATENCY
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.routing import (
     RouteDecision,
@@ -20,6 +23,7 @@ class RoutingService:
         self.scorer = CandidateScorer()
 
     async def route(self, request: RouteRequest) -> RouteResponse:
+        started_at = perf_counter()
         analysis = self.analyzer.analyze(request)
         models = self.model_registry.list_models()
         policy = self.policy_engine.select_candidates(request, analysis, models)
@@ -31,8 +35,34 @@ class RoutingService:
         )
         selected = ranked[0]
 
-        estimated_cost = self._estimate_cost(selected, analysis.estimated_input_tokens, analysis.estimated_output_tokens)
+        estimated_cost = self._estimate_cost(
+            selected,
+            analysis.estimated_input_tokens,
+            analysis.estimated_output_tokens,
+        )
         response_text = self._build_placeholder_response(request, selected)
+        latency_seconds = perf_counter() - started_at
+
+        REQUEST_COUNTER.labels(
+            task_type=request.task_type,
+            workflow_id=request.workflow_id,
+            selected_model=selected.key,
+        ).inc()
+        REQUEST_LATENCY.labels(
+            task_type=request.task_type,
+            workflow_id=request.workflow_id,
+            selected_model=selected.key,
+        ).observe(latency_seconds)
+        REQUEST_COST.labels(
+            task_type=request.task_type,
+            workflow_id=request.workflow_id,
+            selected_model=selected.key,
+        ).observe(estimated_cost)
+        if len(ranked) > 1 and selected.quality_tier > ranked[-1].quality_tier:
+            ESCALATION_COUNTER.labels(
+                task_type=request.task_type,
+                workflow_id=request.workflow_id,
+            ).inc()
 
         return RouteResponse(
             request_id=request.request_id,
