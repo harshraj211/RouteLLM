@@ -7,20 +7,23 @@ from routellm.observability.metrics import ACTIVE_REQUESTS
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.policies import RoutingPolicy
+from routellm.schemas.replay import ReplaySummaryResponse
 from routellm.schemas.routing import (
     HealthResponse,
     RouteRequest,
     RouteResponse,
     RoutingDecisionRecordResponse,
 )
-from routellm.services.registry import InMemoryModelRegistry
 from routellm.services.policy_store import InMemoryPolicyStore
+from routellm.services.registry import InMemoryModelRegistry
+from routellm.services.replay_service import ReplayService
 from routellm.services.router import RoutingService
 
 api_router = APIRouter()
 registry = InMemoryModelRegistry.bootstrap_defaults()
 policy_store = InMemoryPolicyStore.bootstrap_defaults()
 router_service = RoutingService(model_registry=registry)
+replay_service = ReplayService(router_service)
 
 
 @api_router.get("/healthz", response_model=HealthResponse, tags=["system"])
@@ -36,6 +39,16 @@ async def list_models() -> list[ModelDescriptor]:
 @api_router.get("/policies", response_model=list[RoutingPolicy], tags=["policies"])
 async def list_policies() -> list[RoutingPolicy]:
     return policy_store.list_policies()
+
+
+@api_router.post("/replay/default", response_model=ReplaySummaryResponse, tags=["evals"])
+async def replay_default_benchmark() -> ReplaySummaryResponse:
+    summary = await replay_service.run_default_benchmark()
+    return ReplaySummaryResponse(
+        requests_replayed=summary.requests_replayed,
+        average_estimated_cost_usd=summary.average_estimated_cost_usd,
+        selected_models=summary.selected_models,
+    )
 
 
 @api_router.get("/metrics", response_class=PlainTextResponse, tags=["system"])
