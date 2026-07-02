@@ -1,6 +1,8 @@
 from time import perf_counter
 
+from routellm.db.session import get_session
 from routellm.observability.metrics import ESCALATION_COUNTER, REQUEST_COST, REQUEST_COUNTER, REQUEST_LATENCY
+from routellm.repositories.routing_decisions import RoutingDecisionRepository
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.routing import (
     RouteDecision,
@@ -64,7 +66,7 @@ class RoutingService:
                 workflow_id=request.workflow_id,
             ).inc()
 
-        return RouteResponse(
+        response = RouteResponse(
             request_id=request.request_id,
             decision=RouteDecision(
                 selected_model=selected.key,
@@ -82,6 +84,8 @@ class RoutingService:
             escalation_path=[],
             output=RouteOutput(text=response_text),
         )
+        self._persist_decision(request, response)
+        return response
 
     @staticmethod
     def _estimate_cost(
@@ -101,3 +105,11 @@ class RoutingService:
             f"RouteLLM selected '{model.key}' for task '{request.task_type}' "
             f"under budget ${request.max_budget_usd:.4f}."
         )
+
+    @staticmethod
+    def _persist_decision(request: RouteRequest, response: RouteResponse) -> None:
+        session = get_session()
+        try:
+            RoutingDecisionRepository(session).create(request, response)
+        finally:
+            session.close()

@@ -2,9 +2,16 @@ from fastapi import APIRouter
 from fastapi.responses import PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from routellm.db.session import get_session
 from routellm.observability.metrics import ACTIVE_REQUESTS
+from routellm.repositories.routing_decisions import RoutingDecisionRepository
 from routellm.schemas.models import ModelDescriptor
-from routellm.schemas.routing import HealthResponse, RouteRequest, RouteResponse
+from routellm.schemas.routing import (
+    HealthResponse,
+    RouteRequest,
+    RouteResponse,
+    RoutingDecisionRecordResponse,
+)
 from routellm.services.registry import InMemoryModelRegistry
 from routellm.services.router import RoutingService
 
@@ -35,3 +42,29 @@ async def route_request(payload: RouteRequest) -> RouteResponse:
         return await router_service.route(payload)
     finally:
         ACTIVE_REQUESTS.dec()
+
+
+@api_router.get("/decisions", response_model=list[RoutingDecisionRecordResponse], tags=["routing"])
+async def list_decisions(limit: int = 50) -> list[RoutingDecisionRecordResponse]:
+    session = get_session()
+    try:
+        records = RoutingDecisionRepository(session).list_recent(limit=limit)
+        return [
+            RoutingDecisionRecordResponse(
+                id=record.id,
+                request_id=record.request_id,
+                tenant_id=record.tenant_id,
+                workflow_id=record.workflow_id,
+                task_type=record.task_type,
+                selected_model=record.selected_model,
+                reason_codes=record.reason_codes.split(","),
+                estimated_input_tokens=record.estimated_input_tokens,
+                estimated_output_tokens=record.estimated_output_tokens,
+                estimated_cost_usd=record.estimated_cost_usd,
+                actual_cost_usd=record.actual_cost_usd,
+                estimated_latency_ms=record.estimated_latency_ms,
+            )
+            for record in records
+        ]
+    finally:
+        session.close()

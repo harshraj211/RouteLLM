@@ -49,3 +49,18 @@ class RouteResponse(BaseModel):
     usage: RouteUsage
     escalation_path: list[str]
     output: RouteOutput
+
+
+class RoutingDecisionRecordResponse(BaseModel):
+    id: int
+    request_id: str
+    tenant_id: str
+    workflow_id: str
+    task_type: str
+    selected_model: str
+    reason_codes: list[str]
+    estimated_input_tokens: int
+    estimated_output_tokens: int
+    estimated_cost_usd: float
+    actual_cost_usd: float
+    estimated_latency_ms: int

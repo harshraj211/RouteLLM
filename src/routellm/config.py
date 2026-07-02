@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     environment: str = Field(default="development")
     api_prefix: str = "/v1"
     default_currency: str = "USD"
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/routellm"
+    database_url: str = "sqlite:///./routellm.db"
     redis_url: str = "redis://localhost:6379/0"
     enable_docs: bool = True
 
