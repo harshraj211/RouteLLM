@@ -5,6 +5,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from routellm.db.session import get_session
 from routellm.observability.metrics import ACTIVE_REQUESTS
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
+from routellm.schemas.budget import TenantBudgetSnapshot
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.policies import RoutingPolicy
 from routellm.schemas.replay import ReplaySummaryResponse
@@ -44,6 +45,11 @@ async def list_policies() -> list[RoutingPolicy]:
 @api_router.post("/policies", response_model=RoutingPolicy, tags=["policies"])
 async def create_or_update_policy(policy: RoutingPolicy) -> RoutingPolicy:
     return policy_store.upsert_policy(policy)
+
+
+@api_router.get("/budgets/{tenant_id}", response_model=TenantBudgetSnapshot, tags=["budgets"])
+async def get_tenant_budget_snapshot(tenant_id: str) -> TenantBudgetSnapshot:
+    return router_service.budget_ledger.get_snapshot(tenant_id)
 
 
 @api_router.post("/replay/default", response_model=ReplaySummaryResponse, tags=["evals"])
