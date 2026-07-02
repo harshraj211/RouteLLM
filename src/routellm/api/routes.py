@@ -6,6 +6,7 @@ from routellm.db.session import get_session
 from routellm.observability.metrics import ACTIVE_REQUESTS
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
 from routellm.schemas.models import ModelDescriptor
+from routellm.schemas.policies import RoutingPolicy
 from routellm.schemas.routing import (
     HealthResponse,
     RouteRequest,
@@ -13,10 +14,12 @@ from routellm.schemas.routing import (
     RoutingDecisionRecordResponse,
 )
 from routellm.services.registry import InMemoryModelRegistry
+from routellm.services.policy_store import InMemoryPolicyStore
 from routellm.services.router import RoutingService
 
 api_router = APIRouter()
 registry = InMemoryModelRegistry.bootstrap_defaults()
+policy_store = InMemoryPolicyStore.bootstrap_defaults()
 router_service = RoutingService(model_registry=registry)
 
 
@@ -28,6 +31,11 @@ async def healthcheck() -> HealthResponse:
 @api_router.get("/models", response_model=list[ModelDescriptor], tags=["models"])
 async def list_models() -> list[ModelDescriptor]:
     return registry.list_models()
+
+
+@api_router.get("/policies", response_model=list[RoutingPolicy], tags=["policies"])
+async def list_policies() -> list[RoutingPolicy]:
+    return policy_store.list_policies()
 
 
 @api_router.get("/metrics", response_class=PlainTextResponse, tags=["system"])
