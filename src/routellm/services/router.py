@@ -5,6 +5,7 @@ from time import perf_counter
 from routellm.db.session import get_session
 from routellm.observability.metrics import ESCALATION_COUNTER, REQUEST_COST, REQUEST_COUNTER, REQUEST_LATENCY
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
+from routellm.schemas.escalation import EscalationAttempt
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.routing import (
     RouteDecision,
@@ -49,6 +50,34 @@ class RoutingService:
         )
         response_text = await self.execution_service.invoke(request, selected)
         evaluation = self.evaluator.evaluate(request, selected, response_text)
+        escalation_path: list[EscalationAttempt] = []
+
+        if not evaluation.accepted:
+            alternate = self._find_next_affordable_candidate(
+                ranked=ranked,
+                current_model_key=selected.key,
+                max_budget_usd=request.max_budget_usd,
+                estimated_input_tokens=analysis.estimated_input_tokens,
+                estimated_output_tokens=analysis.estimated_output_tokens,
+            )
+            if alternate is not None:
+                escalation_path.append(
+                    EscalationAttempt(
+                        from_model=selected.key,
+                        to_model=alternate.key,
+                        reason_codes=evaluation.reason_codes,
+                    )
+                )
+                selected = alternate
+                estimated_cost = self.budget_service.ensure_within_budget(
+                    selected,
+                    estimated_input_tokens=analysis.estimated_input_tokens,
+                    estimated_output_tokens=analysis.estimated_output_tokens,
+                    max_budget_usd=request.max_budget_usd,
+                )
+                response_text = await self.execution_service.invoke(request, selected)
+                evaluation = self.evaluator.evaluate(request, selected, response_text)
+
         latency_seconds = perf_counter() - started_at
 
         REQUEST_COUNTER.labels(
@@ -88,7 +117,7 @@ class RoutingService:
                 output_tokens=min(analysis.estimated_output_tokens, 120),
                 actual_cost_usd=estimated_cost,
             ),
-            escalation_path=[],
+            escalation_path=escalation_path,
             output=RouteOutput(text=response_text),
         )
         self._persist_decision(request, response)
@@ -117,6 +146,33 @@ class RoutingService:
             status_code=400,
             detail="No candidate model satisfies the request budget.",
         )
+
+    def _find_next_affordable_candidate(
+        self,
+        ranked: list[ModelDescriptor],
+        current_model_key: str,
+        max_budget_usd: float,
+        estimated_input_tokens: int,
+        estimated_output_tokens: int,
+    ) -> ModelDescriptor | None:
+        seen_current = False
+        for model in ranked:
+            if model.key == current_model_key:
+                seen_current = True
+                continue
+            if not seen_current:
+                continue
+            try:
+                self.budget_service.ensure_within_budget(
+                    model,
+                    estimated_input_tokens=estimated_input_tokens,
+                    estimated_output_tokens=estimated_output_tokens,
+                    max_budget_usd=max_budget_usd,
+                )
+                return model
+            except BudgetExceededError:
+                continue
+        return None
 
     @staticmethod
     def _persist_decision(request: RouteRequest, response: RouteResponse) -> None:
