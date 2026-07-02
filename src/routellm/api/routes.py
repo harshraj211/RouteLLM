@@ -41,6 +41,11 @@ async def list_policies() -> list[RoutingPolicy]:
     return policy_store.list_policies()
 
 
+@api_router.post("/policies", response_model=RoutingPolicy, tags=["policies"])
+async def create_or_update_policy(policy: RoutingPolicy) -> RoutingPolicy:
+    return policy_store.upsert_policy(policy)
+
+
 @api_router.post("/replay/default", response_model=ReplaySummaryResponse, tags=["evals"])
 async def replay_default_benchmark() -> ReplaySummaryResponse:
     summary = await replay_service.run_default_benchmark()
