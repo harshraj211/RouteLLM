@@ -34,3 +34,10 @@ class RoutingDecisionRepository:
             .limit(limit)
             .all()
         )
+
+    def get_by_id(self, decision_id: int) -> RoutingDecisionRecord | None:
+        return (
+            self.session.query(RoutingDecisionRecord)
+            .filter(RoutingDecisionRecord.id == decision_id)
+            .one_or_none()
+        )
