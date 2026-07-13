@@ -21,11 +21,11 @@ def test_route_uses_provider_adapter_output() -> None:
     response = client.post("/v1/route", json=payload)
 
     assert response.status_code == 200
-    assert "[vllm:" in response.json()["output"]["text"]
+    assert "[ollama:" in response.json()["output"]["text"]
     assert response.json()["usage"]["provider_request_id"].startswith("mock-")
 
 
-def test_route_exposes_selected_external_provider() -> None:
+def test_route_exposes_selected_local_provider() -> None:
     client = TestClient(app)
 
     response = client.post(
@@ -47,9 +47,9 @@ def test_route_exposes_selected_external_provider() -> None:
 
     assert response.status_code == 200
     decision = response.json()["decision"]
-    assert decision["selected_model"] == "openai-codex"
-    assert decision["selected_provider"] == "openai"
-    assert "PROVIDER_OPENAI_SELECTED" in decision["reason_codes"]
+    assert decision["selected_model"] == "local-coder"
+    assert decision["selected_provider"] == "ollama"
+    assert "PROVIDER_OLLAMA_SELECTED" in decision["reason_codes"]
 
 
 def test_route_maps_upstream_failure_to_bad_gateway(monkeypatch) -> None:
