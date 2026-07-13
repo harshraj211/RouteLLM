@@ -116,6 +116,17 @@ from `0.0` to `1.0`; larger values make a model more likely to handle that inten
 budget and latency constraints remain in force. The initial intent classifier is deterministic
 and keyword-based, making its routing decisions fast and testable without another model call.
 
+The default external provider profiles currently route specialized prompts as follows:
+
+- coding and repository work: OpenAI GPT-5.3 Codex
+- research and long-context analysis: Gemini 3.5 Flash
+- nuanced creative writing and legal analysis: Claude Sonnet 5
+- other configured workloads and failover: Grok 4.5 and the general OpenAI model
+
+These are API model targets. Codex, Claude Cowork, and provider chat applications themselves
+cannot be called as inference endpoints. The `/v1/route` response exposes both
+`selected_model` and `selected_provider`, along with a provider reason code.
+
 ## Model Registry
 
 Models are loaded from `config/models.yaml`. Registry entries contain routing capabilities,
@@ -140,10 +151,11 @@ in addition to `vllm` and generic OpenAI-compatible `hosted` endpoints. Anthropi
 an endpoint such as `https://api.anthropic.com/v1` and `ANTHROPIC_API_KEY`; Gemini entries use
 `https://generativelanguage.googleapis.com/v1beta` and `GEMINI_API_KEY`.
 
-The default registry also includes disabled Gemini 3.5 Flash and Grok 4.5 entries. Grok uses
-xAI's OpenAI-compatible endpoint and `XAI_API_KEY`. To activate either model, first place a
-new provider key in the ignored `.env` file, then change its registry entry to `enabled: true`
-or update it through `PUT /v1/models/{key}`. Never commit provider keys to the registry.
+The default registry includes Gemini 3.5 Flash, Claude Sonnet 5, OpenAI GPT-5.3 Codex, and
+Grok 4.5. In live mode, a credentialed model is automatically excluded from routing when its
+named environment variable is missing. Add provider keys only to the ignored `.env` file;
+never commit keys to the registry. Mock mode keeps all enabled models available so provider
+selection can be tested without making paid calls.
 
 To boot the local platform stack:
 
