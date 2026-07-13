@@ -1,9 +1,11 @@
+from pathlib import Path
+
 import pytest
 
 from routellm.schemas.routing import Message, RouteRequest
 from routellm.services.analyzer import RequestAnalyzer
 from routellm.services.policy import PolicyEngine
-from routellm.services.registry import InMemoryModelRegistry
+from routellm.services.registry import YamlModelRegistry
 from routellm.services.scoring import CandidateScorer
 from routellm.workflows.routing import RoutingWorkflow
 
@@ -19,7 +21,8 @@ def _route(prompt: str, *, response_format: str = "text"):
         response_format=response_format,
     )
     workflow = RoutingWorkflow(RequestAnalyzer(), PolicyEngine(), CandidateScorer())
-    return workflow.run(request, InMemoryModelRegistry.bootstrap_defaults().list_models())
+    registry = YamlModelRegistry.from_file(Path("config/models.yaml"))
+    return workflow.run(request, registry.list_models())
 
 
 @pytest.mark.parametrize(
@@ -29,14 +32,20 @@ def _route(prompt: str, *, response_format: str = "text"):
         (
             "Write a Python function and unit tests for binary search.",
             "coding",
-            "hosted-premium",
+            "openai-codex",
         ),
         (
             "Research and compare sources about transformer efficiency.",
             "research",
-            "hosted-premium",
+            "gemini-3.5-flash",
         ),
-        ("Solve this calculus derivative equation.", "math", "local-medium-json"),
+        (
+            "Draft a moving short story about memory.",
+            "creative_writing",
+            "claude-sonnet",
+        ),
+        ("Review this contract clause for legal risks.", "legal", "claude-sonnet"),
+        ("Solve this calculus derivative equation.", "math", "gemini-3.5-flash"),
     ],
 )
 def test_prompt_semantics_change_selected_model(

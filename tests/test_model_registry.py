@@ -124,6 +124,52 @@ def test_disabled_models_are_visible_only_when_requested(tmp_path: Path) -> None
     ] == ["enabled", "disabled"]
 
 
+def test_live_registry_excludes_models_with_missing_credentials(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("TEST_PROVIDER_API_KEY", raising=False)
+    credentialed = _model(key="credentialed").model_copy(
+        update={
+            "api_key_env": "TEST_PROVIDER_API_KEY",
+            "requires_api_key": True,
+        }
+    )
+    registry_path = tmp_path / "models.yaml"
+    YamlModelRegistry.create(registry_path, [_model(key="local"), credentialed])
+
+    live_registry = YamlModelRegistry.from_file(
+        registry_path,
+        require_credentials=True,
+    )
+
+    assert [model.key for model in live_registry.list_models()] == ["local"]
+    assert [
+        model.key for model in live_registry.list_models(include_disabled=True)
+    ] == ["local", "credentialed"]
+
+
+def test_live_registry_includes_models_with_configured_credentials(
+    tmp_path: Path,
+) -> None:
+    credentialed = _model(key="credentialed").model_copy(
+        update={
+            "api_key_env": "TEST_PROVIDER_API_KEY",
+            "requires_api_key": True,
+        }
+    )
+    registry_path = tmp_path / "models.yaml"
+    YamlModelRegistry.create(registry_path, [credentialed])
+
+    live_registry = YamlModelRegistry.from_file(
+        registry_path,
+        environment={"TEST_PROVIDER_API_KEY": "configured"},
+        require_credentials=True,
+    )
+
+    assert [model.key for model in live_registry.list_models()] == ["credentialed"]
+
+
 def test_model_crud_api_persists_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     registry = YamlModelRegistry.create(tmp_path / "models.yaml", [_model(key="existing")])
     monkeypatch.setattr(routes, "registry", registry)

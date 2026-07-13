@@ -70,8 +70,8 @@ def test_chat_completion_auto_routes_coding_to_stronger_model() -> None:
     )
 
     assert response.status_code == 200
-    assert response.json()["model"] == "gpt-5-mini"
-    assert response.headers["X-RouteLLM-Selected-Model"] == "hosted-premium"
+    assert response.json()["model"] == "gpt-5.3-codex"
+    assert response.headers["X-RouteLLM-Selected-Model"] == "openai-codex"
 
 
 def test_chat_completion_unknown_model_uses_openai_error_shape() -> None:

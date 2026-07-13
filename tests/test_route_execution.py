@@ -25,6 +25,33 @@ def test_route_uses_provider_adapter_output() -> None:
     assert response.json()["usage"]["provider_request_id"].startswith("mock-")
 
 
+def test_route_exposes_selected_external_provider() -> None:
+    client = TestClient(app)
+
+    response = client.post(
+        "/v1/route",
+        json={
+            "tenant_id": "demo",
+            "workflow_id": "provider-selection",
+            "task_type": "qa",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Write a Python function and unit tests for binary search.",
+                }
+            ],
+            "max_budget_usd": 0.1,
+            "latency_slo_ms": 10_000,
+        },
+    )
+
+    assert response.status_code == 200
+    decision = response.json()["decision"]
+    assert decision["selected_model"] == "openai-codex"
+    assert decision["selected_provider"] == "openai"
+    assert "PROVIDER_OPENAI_SELECTED" in decision["reason_codes"]
+
+
 def test_route_maps_upstream_failure_to_bad_gateway(monkeypatch) -> None:
     async def fail_invoke(request: RouteRequest, model: ModelDescriptor) -> None:
         raise InferenceAdapterError(
