@@ -61,6 +61,25 @@ For that coding request, RouteLLM selects `qwen2.5-coder:7b` through the local O
 Use `http://localhost:8000/docs` to inspect the gateway API and `GET /v1/decisions` to audit
 model choices and estimated/actual usage.
 
+## Control Room
+
+Open `http://localhost:8000/dashboard` while the gateway is running. The local dashboard
+shows request volume, local-route share, estimated cloud-baseline spend, estimated savings,
+latency, escalations, model usage, and recent routing decisions.
+
+Savings are always calculated against the configured reference model,
+`ROUTELLM_ANALYTICS_BASELINE_MODEL_KEY` (default: `hosted-premium`). This is a transparent
+comparison: for every routed request, RouteLLM estimates what the same input/output token
+counts would have cost on that reference model, then subtracts the actual routed cost.
+
+The same data is available for automation:
+
+```text
+GET /v1/analytics/summary
+GET /v1/analytics/decisions
+GET /v1/runtime/ollama
+```
+
 ## Default Routing Policy
 
 | Task type | Default model | Provider cost |
