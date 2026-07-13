@@ -50,7 +50,7 @@ _INTENT_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     (
         "creative_writing",
-        (r"\b(write|draft|compose) (?:a |an )?(story|poem|script|song|novel)\b",),
+        (r"\b(write|draft|compose)\b.{0,40}\b(story|poem|script|song|novel)\b",),
     ),
     (
         "summarization",

@@ -28,7 +28,7 @@ class CandidateScorer:
             quality_bonus
             + availability_bonus
             + complexity_bonus
-            + (semantic_affinity * 2.0)
+            + (semantic_affinity * 3.0)
             + (capability_coverage * 0.75)
             - latency_penalty
             - (estimated_cost * 100)

@@ -38,6 +38,7 @@ class RouteRequest(BaseModel):
 
 class RouteDecision(BaseModel):
     selected_model: str
+    selected_provider: str
     reason_codes: list[str]
     estimated_input_tokens: int
     estimated_output_tokens: int

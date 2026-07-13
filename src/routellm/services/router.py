@@ -146,7 +146,11 @@ class RoutingService:
                 workflow_id=request.workflow_id,
             ).inc()
 
-        decision_reason_codes = policy.reason_codes + ["BEST_SCORE_SELECTED"]
+        selected_provider = selected.provider_family or selected.provider
+        decision_reason_codes = policy.reason_codes + [
+            "BEST_SCORE_SELECTED",
+            f"PROVIDER_{selected_provider.upper()}_SELECTED",
+        ]
         if any("TRANSPORT_FAILOVER" in attempt.reason_codes for attempt in escalation_path):
             decision_reason_codes.append("TRANSPORT_FAILOVER_APPLIED")
         if any("ESCALATION_RECOMMENDED" in attempt.reason_codes for attempt in escalation_path):
@@ -157,6 +161,7 @@ class RoutingService:
             request_id=request.request_id,
             decision=RouteDecision(
                 selected_model=selected.key,
+                selected_provider=selected_provider,
                 reason_codes=decision_reason_codes,
                 estimated_input_tokens=analysis.estimated_input_tokens,
                 estimated_output_tokens=analysis.estimated_output_tokens,
