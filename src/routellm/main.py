@@ -1,10 +1,11 @@
 from fastapi import FastAPI, Request
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 from routellm.api.routes import api_router
 from routellm.config import get_settings
+from routellm.dashboard import dashboard_html
 from routellm.db.setup import create_database
 from routellm.observability.tracing import configure_tracing
 
@@ -19,6 +20,10 @@ def create_app() -> FastAPI:
     )
     configure_tracing(app, settings)
     app.include_router(api_router, prefix=settings.api_prefix)
+
+    @app.get("/dashboard", include_in_schema=False)
+    async def dashboard() -> HTMLResponse:
+        return HTMLResponse(dashboard_html())
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(
