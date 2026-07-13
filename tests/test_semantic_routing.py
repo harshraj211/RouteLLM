@@ -35,6 +35,7 @@ def _route(
     ("prompt", "expected_intent", "expected_model"),
     [
         ("Hello, how are you?", "general_qa", "local-small"),
+        ("Explain Python decorators simply.", "general_qa", "local-small"),
         (
                 "Write a Python function and unit tests for binary search.",
                 "coding",

@@ -21,7 +21,14 @@ _INTENT_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
         "coding",
         (
             r"\b(code|coding|program|function|class|api|debug|bug|refactor)\b",
-            r"\b(python|javascript|typescript|java|rust|golang|sql|regex)\b",
+            (
+                r"\b(python|javascript|typescript|java|rust|golang|sql|regex)\b"
+                r".{0,30}\b(code|function|class|api|debug|bug|refactor|test)\b"
+            ),
+            (
+                r"\b(code|function|class|api|debug|bug|refactor|test)\b.{0,30}"
+                r"\b(python|javascript|typescript|java|rust|golang|sql|regex)\b"
+            ),
             r"\b(stack trace|unit test|pull request)\b",
         ),
     ),
