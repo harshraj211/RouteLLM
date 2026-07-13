@@ -100,6 +100,39 @@ async def test_anthropic_adapter_translates_messages_and_usage(
 
 
 @pytest.mark.asyncio
+async def test_anthropic_adapter_omits_unsupported_sampling_parameters(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-secret")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        assert "temperature" not in body
+        assert "top_p" not in body
+        return httpx.Response(
+            200,
+            json={
+                "id": "msg-test",
+                "model": "claude-sonnet-5",
+                "content": [{"type": "text", "text": "Done"}],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 12, "output_tokens": 1},
+            },
+        )
+
+    model = _model(
+        provider="anthropic",
+        endpoint="https://api.anthropic.com/v1",
+        model_id="claude-sonnet-5",
+        api_key_env="ANTHROPIC_API_KEY",
+    ).model_copy(update={"supports_sampling_parameters": False})
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        result = await AnthropicInferenceAdapter(client=client).invoke(_request(), model)
+
+    assert result.text == "Done"
+
+
+@pytest.mark.asyncio
 async def test_gemini_adapter_translates_messages_config_and_usage(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -74,9 +74,9 @@ class AnthropicInferenceAdapter(InferenceAdapter):
         }
         if system_parts:
             payload["system"] = "\n\n".join(system_parts)
-        if request.temperature is not None:
+        if model.supports_sampling_parameters and request.temperature is not None:
             payload["temperature"] = request.temperature
-        if request.top_p is not None:
+        if model.supports_sampling_parameters and request.top_p is not None:
             payload["top_p"] = request.top_p
         if request.stop is not None:
             payload["stop_sequences"] = (
