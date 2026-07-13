@@ -16,7 +16,9 @@ class ReplayRunner:
     def __init__(self, routing_service: RoutingService) -> None:
         self.routing_service = routing_service
 
-    async def run(self, requests: list[RouteRequest], dataset_name: str = "ad-hoc") -> ReplaySummary:
+    async def run(
+        self, requests: list[RouteRequest], dataset_name: str = "ad-hoc"
+    ) -> ReplaySummary:
         responses: list[RouteResponse] = []
         for request in requests:
             responses.append(await self.routing_service.route(request))

@@ -9,7 +9,9 @@ class InMemoryTenantBudgetLedger:
     request_count_by_tenant: dict[str, int] = field(default_factory=dict)
 
     def record_spend(self, tenant_id: str, amount_usd: float) -> TenantBudgetSnapshot:
-        self.spend_by_tenant[tenant_id] = round(self.spend_by_tenant.get(tenant_id, 0.0) + amount_usd, 6)
+        self.spend_by_tenant[tenant_id] = round(
+            self.spend_by_tenant.get(tenant_id, 0.0) + amount_usd, 6
+        )
         self.request_count_by_tenant[tenant_id] = self.request_count_by_tenant.get(tenant_id, 0) + 1
         return self.get_snapshot(tenant_id)
 

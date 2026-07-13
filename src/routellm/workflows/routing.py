@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import TypedDict, cast
 
 from langgraph.graph import END, START, StateGraph
 
@@ -29,8 +29,8 @@ class RoutingWorkflow:
         self.scorer = scorer
         self.graph = self._build_graph().compile()
 
-    def _build_graph(self) -> StateGraph:
-        graph = StateGraph(RoutingState)
+    def _build_graph(self) -> StateGraph[RoutingState, None, RoutingState, RoutingState]:
+        graph: StateGraph[RoutingState, None, RoutingState, RoutingState] = StateGraph(RoutingState)
         graph.add_node("analyze", self._analyze)
         graph.add_node("select_candidates", self._select_candidates)
         graph.add_node("rank_candidates", self._rank_candidates)
@@ -45,7 +45,7 @@ class RoutingWorkflow:
             "request": request,
             "available_models": available_models,
         }
-        return self.graph.invoke(initial_state)
+        return cast(RoutingState, self.graph.invoke(initial_state))
 
     def _analyze(self, state: RoutingState) -> RoutingState:
         request = state["request"]

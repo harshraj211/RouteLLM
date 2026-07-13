@@ -19,6 +19,10 @@ class CandidateScorer:
         latency_penalty = model.latency.p95_ms / 1000
         complexity_bonus = analysis.complexity_score * model.quality_tier
 
-        return quality_bonus + availability_bonus + complexity_bonus - latency_penalty - (
-            estimated_cost * 100
+        return (
+            quality_bonus
+            + availability_bonus
+            + complexity_bonus
+            - latency_penalty
+            - (estimated_cost * 100)
         )
