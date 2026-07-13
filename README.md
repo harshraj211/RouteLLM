@@ -27,7 +27,9 @@ RouteLLM acts like a control plane for inference:
 
 ## Current Status
 
-The repository is being built from the ground up. The first milestone is a working FastAPI router with model registry, policy engine, and route decision logging.
+The current milestone provides a working FastAPI router with semantic request analysis, a
+model registry, capability-aware ranking, budget enforcement, provider failover, and route
+decision logging.
 
 ## Quick Start
 
@@ -98,13 +100,29 @@ parameters, token limits, and SSE response framing. Streaming currently waits fo
 upstream response and then emits compatible chunks; token-by-token proxy streaming and tool
 calling are not implemented yet.
 
+### Semantic auto-routing
+
+For `routellm-auto`, RouteLLM infers an intent from the declared task type and message text.
+Current intents include general QA, coding, math, research, legal, extraction, creative
+writing, summarization, and classification. It then:
+
+1. filters candidates using latency, risk, response-format, and capability requirements;
+2. scores the remaining models using task affinity, capability coverage, quality, health,
+   latency, complexity, and estimated cost;
+3. records an explainable reason such as `SEMANTIC_INTENT_CODING` in the route decision.
+
+Each registry model can declare `capabilities` and `task_affinities`. Affinity values range
+from `0.0` to `1.0`; larger values make a model more likely to handle that intent while the
+budget and latency constraints remain in force. The initial intent classifier is deterministic
+and keyword-based, making its routing decisions fast and testable without another model call.
+
 ## Model Registry
 
 Models are loaded from `config/models.yaml`. Registry entries contain routing capabilities,
-pricing, latency estimates, provider endpoints, and the environment-variable name that holds
-the provider credential. `${VARIABLE:-default}` values are expanded when the file loads. A
-model with `enabled: false` remains visible through the administration API but is excluded
-from routing.
+per-intent affinities, pricing, latency estimates, provider endpoints, and the
+environment-variable name that holds the provider credential. `${VARIABLE:-default}` values
+are expanded when the file loads. A model with `enabled: false` remains visible through the
+administration API but is excluded from routing.
 
 The model APIs support runtime administration and persist changes atomically:
 
