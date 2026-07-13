@@ -1,10 +1,10 @@
 version: 1
 models:
   - key: local-small
-    provider: vllm
-    display_name: Local Small
-    model_id: ${ROUTELLM_LOCAL_SMALL_MODEL:-local-small}
-    endpoint: ${ROUTELLM_LOCAL_SMALL_BASE_URL:-http://localhost:8001/v1}
+    provider: ollama
+    display_name: Local Fast (Ollama)
+    model_id: ${ROUTELLM_OLLAMA_FAST_MODEL:-qwen2.5:3b}
+    endpoint: ${ROUTELLM_OLLAMA_BASE_URL:-http://localhost:11434/v1}
     quality_tier: 1
     supports_structured_output: false
     capabilities: [classification, general_qa, summarization]
@@ -14,34 +14,36 @@ models:
       summarization: 0.9
     max_context_tokens: 8192
     pricing:
-      input_cost_per_1k_tokens: 0.0003
-      output_cost_per_1k_tokens: 0.0005
+      input_cost_per_1k_tokens: 0.0
+      output_cost_per_1k_tokens: 0.0
     latency:
       p50_ms: 350
       p95_ms: 900
-  - key: local-medium-json
-    provider: vllm
-    display_name: Local Medium JSON
-    model_id: ${ROUTELLM_LOCAL_MEDIUM_MODEL:-local-medium-json}
-    endpoint: ${ROUTELLM_LOCAL_MEDIUM_BASE_URL:-http://localhost:8002/v1}
-    quality_tier: 2
+  - key: local-coder
+    provider: ollama
+    display_name: Local Coder (Ollama)
+    model_id: ${ROUTELLM_OLLAMA_CODER_MODEL:-qwen2.5-coder:7b}
+    endpoint: ${ROUTELLM_OLLAMA_BASE_URL:-http://localhost:11434/v1}
+    quality_tier: 3
     supports_structured_output: true
-    capabilities: [classification, code_generation, general_qa, reasoning, structured_output, summarization]
+    capabilities: [classification, code_generation, general_qa, long_context, reasoning, research, structured_output, summarization]
     task_affinities:
       classification: 0.9
-      coding: 0.6
+      coding: 1.0
       extraction: 0.98
       general_qa: 0.8
-      math: 0.75
+      math: 0.9
+      research: 0.85
       summarization: 0.8
-    max_context_tokens: 16384
+    max_context_tokens: 32768
     pricing:
-      input_cost_per_1k_tokens: 0.0008
-      output_cost_per_1k_tokens: 0.0011
+      input_cost_per_1k_tokens: 0.0
+      output_cost_per_1k_tokens: 0.0
     latency:
-      p50_ms: 700
-      p95_ms: 1800
+      p50_ms: 900
+      p95_ms: 2500
   - key: hosted-premium
+    enabled: false
     provider: hosted
     provider_family: openai
     display_name: Hosted Premium
@@ -70,6 +72,7 @@ models:
       p50_ms: 1200
       p95_ms: 2500
   - key: openai-codex
+    enabled: false
     provider: hosted
     provider_family: openai
     display_name: OpenAI GPT-5.3 Codex
@@ -95,6 +98,7 @@ models:
       p50_ms: 1800
       p95_ms: 4000
   - key: claude-sonnet
+    enabled: false
     provider: anthropic
     provider_family: anthropic
     display_name: Claude Sonnet 5
@@ -123,6 +127,7 @@ models:
       p50_ms: 1500
       p95_ms: 3500
   - key: gemini-3.5-flash
+    enabled: false
     provider: gemini
     provider_family: google
     display_name: Gemini 3.5 Flash
@@ -149,6 +154,7 @@ models:
       p50_ms: 1200
       p95_ms: 3500
   - key: grok-4.5
+    enabled: false
     provider: hosted
     provider_family: xai
     display_name: Grok 4.5
