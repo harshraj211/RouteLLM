@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     chat_default_task_type: str = "qa"
     chat_default_max_budget_usd: float = Field(default=0.05, gt=0)
     chat_default_latency_slo_ms: int = Field(default=30000, gt=0)
+    analytics_baseline_model_key: str = "hosted-premium"
     model_registry_path: Path = Path("config/models.yaml")
     model_registry_writes_enabled: bool = True
     local_small_base_url: str = "http://localhost:8001/v1"
