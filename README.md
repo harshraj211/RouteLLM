@@ -1,29 +1,40 @@
-# RouteLLM
+<div align="center">
+
+# 🧭 RouteLLM
 
 **A local-first, OpenAI-compatible gateway that routes each request to the most suitable LLM.**
 
-RouteLLM sits between an application and multiple language models. It analyzes the request,
-filters models by capability, latency, credentials, and budget, ranks the eligible candidates,
-and forwards the request to the best available option.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#license)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](#prerequisites)
+[![Ollama](https://img.shields.io/badge/local--first-Ollama-black.svg)](#4-install-local-models)
+[![OpenAI Compatible](https://img.shields.io/badge/API-OpenAI--Compatible-412991.svg)](#openai-compatible-endpoint)
 
-Local Ollama models are used by default, so RouteLLM can serve requests without per-token API
-charges. OpenAI and Anthropic/Claude providers can be enabled through the interactive setup
-wizard when cloud models are required.
+</div>
 
-## Highlights
+---
 
-- Local-first routing through Ollama's OpenAI-compatible API
-- Automatic discovery of installed Ollama chat models
-- Semantic routing for general Q&A, coding, math, research, extraction, legal, and creative tasks
-- Optional OpenAI and Anthropic/Claude routing
-- OpenAI-compatible `/v1/chat/completions` endpoint
-- Simple terminal client: `routellm "your question"`
-- Cost, latency, capability, health, and budget-aware candidate ranking
-- Response evaluation, retry, failover, and escalation tracking
-- Local analytics dashboard and Prometheus metrics
-- Auditable routing decisions with estimated and actual usage
+RouteLLM sits between an application and multiple language models. It analyzes the request, filters models by capability, latency, credentials, and budget, ranks the eligible candidates, and forwards the request to the best available option.
 
-## How It Works
+Local Ollama models are used by default, so RouteLLM can serve requests without per-token API charges. OpenAI and Anthropic/Claude providers can be enabled through the interactive setup wizard when cloud models are required.
+
+---
+
+## ✨ Highlights
+
+- 🖥️ Local-first routing through Ollama's OpenAI-compatible API
+- 🔍 Automatic discovery of installed Ollama chat models
+- 🧠 Semantic routing for general Q&A, coding, math, research, extraction, legal, and creative tasks
+- ☁️ Optional OpenAI and Anthropic/Claude routing
+- 🔌 OpenAI-compatible `/v1/chat/completions` endpoint
+- 💬 Simple terminal client: `routellm "your question"`
+- 📊 Cost, latency, capability, health, and budget-aware candidate ranking
+- 🔁 Response evaluation, retry, failover, and escalation tracking
+- 📈 Local analytics dashboard and Prometheus metrics
+- 🧾 Auditable routing decisions with estimated and actual usage
+
+---
+
+## 🧩 How It Works
 
 ```text
 Client, application, or agent
@@ -41,16 +52,18 @@ Client, application, or agent
   Ollama / OpenAI / Anthropic
 ```
 
-RouteLLM does not always select the largest model. A short general question can use a fast 3B
-model, while a code-generation request can use a coder model. More capable or paid models are
-considered only when they are enabled, available, and appropriate for the request.
+> RouteLLM does not always select the largest model. A short general question can use a fast 3B model, while a code-generation request can use a coder model. More capable or paid models are considered only when they are enabled, available, and appropriate for the request.
 
-## Prerequisites
+---
 
-- Python 3.12 or newer
-- Git
-- Ollama for local inference (recommended)
-- An OpenAI or Anthropic API key only if that provider is enabled
+## ✅ Prerequisites
+
+| Requirement | Notes |
+| --- | --- |
+| Python | 3.12 or newer |
+| Git | For cloning the repository |
+| Ollama | Recommended, for local inference |
+| OpenAI or Anthropic API key | Only if that provider is enabled |
 
 Verify Python before continuing:
 
@@ -58,10 +71,11 @@ Verify Python before continuing:
 python --version
 ```
 
-On Windows, if `python` is unavailable but the Python launcher is installed, use `py` in place
-of `python` in the commands below.
+> 💡 On Windows, if `python` is unavailable but the Python launcher is installed, use `py` in place of `python` in the commands below.
 
-## Quick Start
+---
+
+## 🚀 Quick Start
 
 ### 1. Clone the repository
 
@@ -72,14 +86,14 @@ cd RouteLLM
 
 ### 2. Create and activate a virtual environment
 
-Windows PowerShell:
+**Windows PowerShell**
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-macOS or Linux:
+**macOS or Linux**
 
 ```bash
 python3 -m venv .venv
@@ -122,8 +136,7 @@ The wizard asks whether to enable:
 - Anthropic/Claude API
 - OpenAI API
 
-API keys are entered without being echoed and are saved to the local `.env` file. The `.env`
-file is ignored by Git and must never be committed or shared.
+API keys are entered without being echoed and are saved to the local `.env` file. The `.env` file is ignored by Git and **must never be committed or shared**.
 
 For an Ollama-only installation, accept the defaults:
 
@@ -145,14 +158,16 @@ The local services are now available at:
 
 | Service | URL |
 | --- | --- |
-| Gateway | `http://localhost:8000` |
-| Interactive API documentation | `http://localhost:8000/docs` |
-| Control Room dashboard | `http://localhost:8000/dashboard` |
-| OpenAI-compatible API base | `http://localhost:8000/v1` |
+| 🌐 Gateway | `http://localhost:8000` |
+| 📄 Interactive API documentation | `http://localhost:8000/docs` |
+| 🎛️ Control Room dashboard | `http://localhost:8000/dashboard` |
+| 🔌 OpenAI-compatible API base | `http://localhost:8000/v1` |
 
-Restart the gateway after changing `.env` or running `routellm setup` again.
+> Restart the gateway after changing `.env` or running `routellm setup` again.
 
-## Command-Line Usage
+---
+
+## 💻 Command-Line Usage
 
 With the virtual environment active and the gateway running:
 
@@ -188,7 +203,9 @@ If the virtual environment is not active, use the executable directly on Windows
 .\.venv\Scripts\routellm.exe "Your question"
 ```
 
-## API Usage
+---
+
+## 🔗 API Usage
 
 ### Native routing endpoint
 
@@ -212,8 +229,7 @@ Invoke-RestMethod `
     -Body $body
 ```
 
-The response includes the selected model and provider, reason codes, token usage, latency,
-cost, execution attempts, escalation path, and generated output.
+The response includes the selected model and provider, reason codes, token usage, latency, cost, execution attempts, escalation path, and generated output.
 
 ### OpenAI-compatible endpoint
 
@@ -241,7 +257,9 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)
 ```
 
-## Routing Behavior
+---
+
+## 🧭 Routing Behavior
 
 The default local profiles are optimized for two common workload classes:
 
@@ -250,10 +268,7 @@ The default local profiles are optimized for two common workload classes:
 | Short questions, classification, summaries | `qwen2.5:3b` | Faster and lighter |
 | Code generation, structured output, complex analysis | `qwen2.5-coder:7b` | Stronger coding and reasoning capability |
 
-Additional Ollama chat models are discovered and added to the candidate set automatically.
-RouteLLM infers initial capability hints from model names; explicit profiles in
-[`config/models.yaml`](config/models.yaml) remain the best way to provide accurate capabilities,
-context limits, and task affinities.
+Additional Ollama chat models are discovered and added to the candidate set automatically. RouteLLM infers initial capability hints from model names; explicit profiles in [`config/models.yaml`](config/models.yaml) remain the best way to provide accurate capabilities, context limits, and task affinities.
 
 Cloud profiles use ranked specialist preferences when enabled:
 
@@ -266,10 +281,11 @@ Cloud profiles use ranked specialist preferences when enabled:
 | Math and deep reasoning | Premium reasoning profile |
 | Current news and trends | Grok profile |
 
-Preferences are not hard locks. Credentials, model health, request budget, capabilities,
-latency targets, and fallback availability are evaluated before execution.
+> Preferences are not hard locks. Credentials, model health, request budget, capabilities, latency targets, and fallback availability are evaluated before execution.
 
-## Configuration
+---
+
+## ⚙️ Configuration
 
 Common environment variables:
 
@@ -288,7 +304,9 @@ Common environment variables:
 
 See [`.env.example`](.env.example) for the complete example configuration.
 
-## Observability and Control Room
+---
+
+## 📊 Observability and Control Room
 
 Open `http://localhost:8000/dashboard` to view:
 
@@ -311,11 +329,11 @@ Useful endpoints:
 | `GET /v1/metrics` | Prometheus metrics |
 | `POST /v1/replay/compare-default` | Compare routing with the cloud baseline |
 
-## Agent and MCP Integration
+---
 
-RouteLLM can control inference only when an application sends its model requests through the
-RouteLLM gateway. It cannot replace or switch the built-in subscription model inside Codex,
-Claude Cowork, or another hosted agent interface.
+## 🤖 Agent and MCP Integration
+
+RouteLLM can control inference only when an application sends its model requests through the RouteLLM gateway. It cannot replace or switch the built-in subscription model inside Codex, Claude Cowork, or another hosted agent interface.
 
 An optional MCP task-policy companion is available for compatible hosts:
 
@@ -326,7 +344,9 @@ command = "routellm-mcp"
 
 See [the agent-native setup guide](docs/AGENT_NATIVE_SETUP.md) for details.
 
-## Development and Verification
+---
+
+## 🧪 Development and Verification
 
 Run the test suite and static checks from the repository root:
 
@@ -341,7 +361,9 @@ Run the API locally:
 python -m uvicorn routellm.main:app --reload
 ```
 
-## Security Notes
+---
+
+## 🔒 Security Notes
 
 - Never commit `.env`, API keys, or provider credentials.
 - Rotate a key immediately if it appears in a terminal recording, screenshot, issue, or commit.
@@ -349,19 +371,25 @@ python -m uvicorn routellm.main:app --reload
 - Cloud models can incur real charges; use request budgets and review routing decisions.
 - Run RouteLLM behind authentication and TLS before exposing it outside a trusted local network.
 
-## Current Limitations
+---
+
+## ⚠️ Current Limitations
 
 - Capability metadata for automatically discovered Ollama models is inferred from model names.
 - Local response speed depends heavily on model size, hardware, and whether the model is loaded.
 - Provider credentials are stored in the local `.env` file by the current setup wizard.
 - RouteLLM routes API traffic; it does not change models inside third-party desktop subscriptions.
 
-## Documentation
+---
+
+## 📚 Documentation
 
 - [Agent-native MCP setup](docs/AGENT_NATIVE_SETUP.md)
 - [Agent-native architecture decision](docs/adr/ADR-002-agent-native-control-plane.md)
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
 
-## License
+---
 
-This project is licensed under the MIT License.
+## 📄 License
+
+This project is licensed under the **MIT License**.
