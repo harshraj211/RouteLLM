@@ -1,10 +1,12 @@
+import json
+
 from routellm.schemas.evaluation import EvaluationResult
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.routing import RouteRequest
 
 
 class ResponseEvaluator:
-    """Heuristic response evaluator for early-exit decisions."""
+    """Deterministic quality gate used before accepting a low-cost model response."""
 
     def evaluate(
         self,
@@ -16,12 +18,27 @@ class ResponseEvaluator:
         reason_codes = ["BASE_CONFIDENCE_HEURISTIC"]
 
         if request.response_format == "json":
-            confidence -= 0.05
-            reason_codes.append("JSON_OUTPUT_MORE_STRICT")
+            try:
+                json.loads(response_text)
+                reason_codes.append("JSON_OUTPUT_VALID")
+            except json.JSONDecodeError:
+                confidence -= 0.5
+                reason_codes.append("JSON_OUTPUT_INVALID")
 
-        if len(response_text) >= 32:
+        if len(response_text.strip()) >= 32:
             confidence += 0.05
             reason_codes.append("RESPONSE_LENGTH_PLAUSIBLE")
+        else:
+            confidence -= 0.25
+            reason_codes.append("RESPONSE_TOO_SHORT")
+
+        normalized_response = response_text.lower()
+        if any(
+            phrase in normalized_response
+            for phrase in ("i cannot", "i can't", "unable to", "cannot help with")
+        ):
+            confidence -= 0.5
+            reason_codes.append("MODEL_DECLINED_TASK")
 
         accepted = confidence >= 0.65
         if accepted:
