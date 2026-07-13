@@ -12,6 +12,8 @@ class RequestAnalysis:
     complexity_score: float
     semantic_intent: str
     required_capabilities: frozenset[str]
+    preferred_model_keys: tuple[str, ...]
+    preferred_provider_families: tuple[str, ...]
 
 
 _INTENT_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
@@ -35,6 +37,19 @@ _INTENT_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
         (
             r"\b(research|compare sources|literature review|evidence|citation)\b",
             r"\b(analy[sz]e (?:this )?(?:paper|report|study))\b",
+        ),
+    ),
+    (
+        "current_events",
+        (
+            (
+                r"\b(current|latest|recent|today|this week|breaking)\b"
+                r".{0,40}\b(news|events?|trends?|updates?)\b"
+            ),
+            (
+                r"\b(news|events?|trends?|updates?)\b"
+                r".{0,40}\b(current|latest|recent|today|this week|breaking)\b"
+            ),
         ),
     ),
     (
@@ -75,12 +90,26 @@ _INTENT_CAPABILITIES = {
     "coding": frozenset({"code_generation", "reasoning"}),
     "math": frozenset({"reasoning"}),
     "research": frozenset({"research", "long_context"}),
+    "current_events": frozenset({"research", "long_context"}),
     "legal": frozenset({"reasoning"}),
     "extraction": frozenset({"structured_output"}),
     "creative_writing": frozenset({"creative_writing"}),
     "summarization": frozenset({"summarization"}),
     "classification": frozenset({"classification"}),
     "general_qa": frozenset({"general_qa"}),
+}
+
+_INTENT_SPECIALISTS = {
+    "coding": (("openai-codex", "claude-sonnet", "grok-4.5"), ("openai", "anthropic", "xai")),
+    "math": (("hosted-premium", "grok-4.5", "gemini-3.5-flash"), ("openai", "xai", "google")),
+    "research": (("gemini-3.5-flash", "claude-sonnet"), ("google", "anthropic")),
+    "current_events": (("grok-4.5", "gemini-3.5-flash"), ("xai", "google")),
+    "legal": (("claude-sonnet",), ("anthropic",)),
+    "creative_writing": (("claude-sonnet", "grok-4.5"), ("anthropic", "xai")),
+    "summarization": (("gemini-3.5-flash", "claude-sonnet"), ("google", "anthropic")),
+    "extraction": (("local-coder", "gemini-3.5-flash"), ("google",)),
+    "classification": (("local-small", "gemini-3.5-flash"), ("google",)),
+    "general_qa": (("local-small", "grok-4.5"), ("xai",)),
 }
 
 
@@ -103,6 +132,8 @@ class RequestAnalyzer:
         )
         complexity_score = min(1.0, estimated_input_tokens / 4000)
 
+        preferred_model_keys, preferred_provider_families = _INTENT_SPECIALISTS[semantic_intent]
+
         return RequestAnalysis(
             estimated_input_tokens=estimated_input_tokens,
             estimated_output_tokens=estimated_output_tokens,
@@ -110,6 +141,8 @@ class RequestAnalyzer:
             complexity_score=complexity_score,
             semantic_intent=semantic_intent,
             required_capabilities=_INTENT_CAPABILITIES[semantic_intent],
+            preferred_model_keys=preferred_model_keys,
+            preferred_provider_families=preferred_provider_families,
         )
 
     @staticmethod

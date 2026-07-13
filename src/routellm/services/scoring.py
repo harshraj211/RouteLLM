@@ -23,6 +23,7 @@ class CandidateScorer:
             model.task_affinities.get("general_qa", 0.5),
         )
         capability_coverage = self._capability_coverage(model, analysis)
+        specialist_bonus = self._specialist_bonus(model, analysis)
 
         return (
             quality_bonus
@@ -30,6 +31,7 @@ class CandidateScorer:
             + complexity_bonus
             + (semantic_affinity * 3.0)
             + (capability_coverage * 0.75)
+            + specialist_bonus
             - latency_penalty
             - (estimated_cost * 100)
         )
@@ -40,3 +42,18 @@ class CandidateScorer:
             return 1.0
         matched = analysis.required_capabilities.intersection(model.capabilities)
         return len(matched) / len(analysis.required_capabilities)
+
+    @staticmethod
+    def _specialist_bonus(model: ModelDescriptor, analysis: RequestAnalysis) -> float:
+        try:
+            preference_rank = analysis.preferred_model_keys.index(model.key)
+        except ValueError:
+            preference_rank = -1
+        if preference_rank == 0:
+            return 6.25
+        if preference_rank > 0:
+            return 3.0
+        provider_family = model.provider_family or model.provider
+        if provider_family in analysis.preferred_provider_families:
+            return 1.25
+        return 0.0

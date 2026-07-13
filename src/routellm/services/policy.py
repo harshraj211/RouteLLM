@@ -24,6 +24,8 @@ class PolicyEngine:
     ) -> PolicyDecision:
         eligible_models = models
         reason_codes: list[str] = [f"SEMANTIC_INTENT_{analysis.semantic_intent.upper()}"]
+        if any(self._matches_specialist_preference(model, analysis) for model in models):
+            reason_codes.append("SEMANTIC_SPECIALIST_PREFERENCE_AVAILABLE")
         if request.requested_model:
             eligible_models = [
                 model for model in models if request.requested_model in {model.key, model.model_id}
@@ -62,3 +64,14 @@ class PolicyEngine:
             reason_codes.append("FALLBACK_TO_BEST_AVAILABLE_MODEL")
 
         return PolicyDecision(candidates=filtered, reason_codes=reason_codes)
+
+    @staticmethod
+    def _matches_specialist_preference(
+        model: ModelDescriptor,
+        analysis: RequestAnalysis,
+    ) -> bool:
+        provider_family = model.provider_family or model.provider
+        return (
+            model.key in analysis.preferred_model_keys
+            or provider_family in analysis.preferred_provider_families
+        )
