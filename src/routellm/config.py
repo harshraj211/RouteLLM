@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     inference_mode: Literal["mock", "live"] = "mock"
     inference_timeout_seconds: float = 30.0
     # Local models can take longer to load or generate on CPU-only machines.
-    ollama_inference_timeout_seconds: float = 120.0
+    ollama_inference_timeout_seconds: float = 300.0
     inference_max_retries: int = Field(default=1, ge=0, le=5)
     inference_retry_backoff_seconds: float = Field(default=0.1, ge=0.0, le=10.0)
     chat_default_tenant_id: str = "default"

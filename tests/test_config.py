@@ -18,4 +18,4 @@ def test_ollama_timeout_defaults_to_a_longer_local_inference_window(monkeypatch)
     settings = Settings(_env_file=None)
 
     assert settings.inference_timeout_seconds == 30.0
-    assert settings.ollama_inference_timeout_seconds == 120.0
+    assert settings.ollama_inference_timeout_seconds == 300.0
