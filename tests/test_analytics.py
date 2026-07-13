@@ -78,3 +78,15 @@ def test_decisions_mark_local_routes_and_calculate_per_request_savings() -> None
     assert decisions[0].is_local is True
     assert decisions[0].reference_baseline_cost_usd == 0.04
     assert decisions[0].estimated_savings_usd == 0.04
+
+
+def test_decisions_preserve_legacy_local_model_classification() -> None:
+    baseline = _model("cloud-reference", "hosted", 0.01, 0.03)
+
+    decisions = AnalyticsService().decisions(
+        [_record(1, "local-medium-json", 0)],
+        [baseline],
+        baseline_model_key="cloud-reference",
+    )
+
+    assert decisions[0].is_local is True
