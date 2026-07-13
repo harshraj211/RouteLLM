@@ -8,6 +8,7 @@ from routellm.services.router import RoutingService
 class ReplaySummary:
     dataset_name: str
     requests_replayed: int
+    total_estimated_cost_usd: float
     average_estimated_cost_usd: float
     selected_models: list[str]
 
@@ -29,6 +30,7 @@ class ReplayRunner:
         return ReplaySummary(
             dataset_name=dataset_name,
             requests_replayed=len(responses),
+            total_estimated_cost_usd=round(total_cost, 6),
             average_estimated_cost_usd=round(average_cost, 6),
             selected_models=[response.decision.selected_model for response in responses],
         )
