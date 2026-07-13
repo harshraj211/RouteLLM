@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     enable_docs: bool = True
     inference_mode: Literal["mock", "live"] = "mock"
+    enable_cloud_models: bool = False
     inference_timeout_seconds: float = 30.0
     # Local models can take longer to load or generate on CPU-only machines.
     ollama_inference_timeout_seconds: float = 300.0

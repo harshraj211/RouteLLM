@@ -197,11 +197,13 @@ class YamlModelRegistry:
         models: list[ModelDescriptor],
         environment: Mapping[str, str] | None = None,
         require_credentials: bool = False,
+        allow_disabled_cloud_models: bool = False,
     ) -> None:
         self.path = path
         self._models = {model.key: model for model in models}
         self._environment = dict(environment or {})
         self._require_credentials = require_credentials
+        self._allow_disabled_cloud_models = allow_disabled_cloud_models
         self._lock = RLock()
 
     @classmethod
@@ -210,12 +212,14 @@ class YamlModelRegistry:
         path: Path,
         environment: Mapping[str, str] | None = None,
         require_credentials: bool = False,
+        allow_disabled_cloud_models: bool = False,
     ) -> "YamlModelRegistry":
         registry = cls(
             path=path,
             models=[],
             environment=environment,
             require_credentials=require_credentials,
+            allow_disabled_cloud_models=allow_disabled_cloud_models,
         )
         registry.reload()
         return registry
@@ -238,6 +242,7 @@ class YamlModelRegistry:
             settings.model_registry_path,
             environment=environment,
             require_credentials=settings.inference_mode == "live",
+            allow_disabled_cloud_models=settings.enable_cloud_models,
         )
 
     @classmethod
@@ -253,7 +258,16 @@ class YamlModelRegistry:
                 model
                 for model in self._models.values()
                 if include_disabled
-                or (model.enabled and self._has_required_credentials(model))
+                or (
+                    (
+                        model.enabled
+                        or (
+                            self._allow_disabled_cloud_models
+                            and model.provider in {"hosted", "anthropic", "gemini", "xai"}
+                        )
+                    )
+                    and self._has_required_credentials(model)
+                )
             ]
 
     def _has_required_credentials(self, model: ModelDescriptor) -> bool:

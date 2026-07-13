@@ -69,6 +69,14 @@ Set `ROUTELLM_OLLAMA_INFERENCE_TIMEOUT_SECONDS` in `.env` to adjust it.
 
 With the gateway running, install the editable package once and then ask a question directly:
 
+Configure providers once with the setup wizard:
+
+```powershell
+routellm setup
+```
+
+It detects Ollama usage and securely prompts for optional Anthropic/Claude and OpenAI API keys.
+
 ```powershell
 python -m pip install -e ".[dev]"
 routellm "Explain Python decorators simply"

@@ -3,6 +3,8 @@
 import argparse
 import json
 import sys
+from getpass import getpass
+from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -68,6 +70,42 @@ def _ask(gateway_url: str, prompt: str, task_type: str, max_output_tokens: int) 
     print(response["output"]["text"])
 
 
+def _setup() -> None:
+    print("RouteLLM setup")
+    print("Press Enter to accept defaults. API keys are never displayed.")
+    use_ollama = input("Enable Ollama? [Y/n]: ").strip().lower() not in {"n", "no"}
+    use_anthropic = input("Enable Anthropic/Claude API? [y/N]: ").strip().lower() in {"y", "yes"}
+    use_openai = input("Enable OpenAI API? [y/N]: ").strip().lower() in {"y", "yes"}
+    values = {
+        "ROUTELLM_INFERENCE_MODE": "live",
+        "ROUTELLM_ENABLE_CLOUD_MODELS": str(use_anthropic or use_openai).lower(),
+    }
+    if use_ollama:
+        values["ROUTELLM_OLLAMA_FAST_MODEL"] = input(
+            "Ollama fast model [qwen2.5:3b]: "
+        ).strip() or "qwen2.5:3b"
+        values["ROUTELLM_OLLAMA_CODER_MODEL"] = input(
+            "Ollama coder model [qwen2.5-coder:7b]: "
+        ).strip() or "qwen2.5-coder:7b"
+    if use_anthropic:
+        values["ANTHROPIC_API_KEY"] = getpass("Anthropic API key: ")
+    if use_openai:
+        values["OPENAI_API_KEY"] = getpass("OpenAI API key: ")
+    env_path = Path(".env")
+    existing = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
+    lines = existing.splitlines()
+    for key, value in values.items():
+        replacement = f"{key}={value}"
+        for index, line in enumerate(lines):
+            if line.startswith(f"{key}="):
+                lines[index] = replacement
+                break
+        else:
+            lines.append(replacement)
+    env_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    print(f"Saved configuration to {env_path.resolve()}. Restart the gateway.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="routellm", description="Use a local RouteLLM gateway.")
     parser.add_argument(
@@ -82,6 +120,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1].lower() == "setup":
+        _setup()
+        return
     args = build_parser().parse_args()
     try:
         if args.prompt == ["models"]:
