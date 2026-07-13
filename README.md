@@ -45,6 +45,49 @@ command = "routellm-mcp"
 See [the agent-native setup guide](docs/AGENT_NATIVE_SETUP.md) for host guidance and an
 example tool response.
 
+## Setup Plan
+
+Follow these steps once on each machine that will use RouteLLM.
+
+1. Install Python 3.12 or newer, then clone and install the repository:
+
+   ```powershell
+   git clone https://github.com/harshraj211/RouteLLM.git
+   cd RouteLLM
+   python -m pip install -e .
+   ```
+
+2. Verify the MCP server can load before configuring an agent host:
+
+   ```powershell
+   python -c "from routellm.agent_native.mcp_server import mcp; print(mcp.name)"
+   ```
+
+   Expected output: `RouteLLM`.
+
+3. Register the local stdio server in the host application. For Codex, add this entry to the
+   applicable Codex configuration and start a new task:
+
+   ```toml
+   [mcp_servers.routellm]
+   command = "routellm-mcp"
+   ```
+
+   For Claude Cowork, Antigravity, or another MCP host, register the same
+   `routellm-mcp` command through that product's MCP-server configuration screen.
+
+4. Confirm the host can see the `route_task` and `host_capabilities` tools. Ask the agent to
+   call `host_capabilities` with its host name, such as `codex`.
+
+5. Start using RouteLLM before non-trivial work. A prompt such as `Use RouteLLM to plan a
+   Python bug fix and tests` should produce a local policy with `execution_target` equal to
+   `current_agent`, `model_control` equal to `host_managed`, and no API-key requirement.
+
+6. If the tool is missing, restart the host after configuration changes and run step 2 again.
+   If step 2 fails, rerun `python -m pip install -e .` from the repository directory.
+
+RouteLLM's default mode needs no `.env` file, provider account, or model API key.
+
 ## MCP Tools
 
 - `route_task`: returns a local task policy without calling a provider API.
