@@ -7,9 +7,10 @@ models:
     endpoint: ${ROUTELLM_OLLAMA_BASE_URL:-http://localhost:11434/v1}
     quality_tier: 1
     supports_structured_output: false
-    capabilities: [classification, general_qa, summarization]
+    capabilities: [classification, creative_writing, general_qa, summarization]
     task_affinities:
       classification: 0.95
+      creative_writing: 0.85
       general_qa: 0.95
       summarization: 0.9
     max_context_tokens: 8192
