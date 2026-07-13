@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -7,10 +8,15 @@ from routellm.services.analyzer import RequestAnalyzer
 from routellm.services.policy import PolicyEngine
 from routellm.services.registry import YamlModelRegistry
 from routellm.services.scoring import CandidateScorer
-from routellm.workflows.routing import RoutingWorkflow
+from routellm.workflows.routing import RoutingState, RoutingWorkflow
 
 
-def _route(prompt: str, *, response_format: str = "text"):
+def _route(
+    prompt: str,
+    *,
+    response_format: Literal["text", "json"] = "text",
+    include_disabled: bool = False,
+) -> RoutingState:
     request = RouteRequest(
         tenant_id="semantic-test",
         workflow_id="auto-router",
@@ -22,7 +28,7 @@ def _route(prompt: str, *, response_format: str = "text"):
     )
     workflow = RoutingWorkflow(RequestAnalyzer(), PolicyEngine(), CandidateScorer())
     registry = YamlModelRegistry.from_file(Path("config/models.yaml"))
-    return workflow.run(request, registry.list_models())
+    return workflow.run(request, registry.list_models(include_disabled=include_disabled))
 
 
 @pytest.mark.parametrize(
@@ -86,3 +92,51 @@ def test_explicit_task_type_overrides_generic_prompt() -> None:
 
     assert analysis.semantic_intent == "classification"
     assert analysis.required_capabilities == frozenset({"classification"})
+
+
+@pytest.mark.parametrize(
+    ("prompt", "expected_model", "expected_provider"),
+    [
+        (
+            "Write a Python API client and unit tests for retry handling.",
+            "openai-codex",
+            "openai",
+        ),
+        (
+            "Research and compare sources about transformer efficiency.",
+            "gemini-3.5-flash",
+            "google",
+        ),
+        (
+            "Review this contract clause for legal risk and compliance issues.",
+            "claude-sonnet",
+            "anthropic",
+        ),
+        (
+            "Draft a moving short story about memory and regret.",
+            "claude-sonnet",
+            "anthropic",
+        ),
+        (
+            "Solve this probability theorem and show the reasoning.",
+            "hosted-premium",
+            "openai",
+        ),
+        (
+            "Summarize the latest tech trends and current AI news updates.",
+            "grok-4.5",
+            "xai",
+        ),
+    ],
+)
+def test_specialist_cloud_models_win_when_available(
+    prompt: str,
+    expected_model: str,
+    expected_provider: str,
+) -> None:
+    state = _route(prompt, include_disabled=True)
+    selected = state["ranked_candidates"][0]
+
+    assert selected.key == expected_model
+    assert (selected.provider_family or selected.provider) == expected_provider
+    assert "SEMANTIC_SPECIALIST_PREFERENCE_AVAILABLE" in state["policy"].reason_codes
