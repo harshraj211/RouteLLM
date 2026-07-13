@@ -44,7 +44,11 @@ api_router = APIRouter()
 settings = get_settings()
 registry = YamlModelRegistry.from_settings(settings)
 policy_store = InMemoryPolicyStore.bootstrap_defaults()
-router_service = RoutingService(model_registry=registry, settings=settings)
+router_service = RoutingService(
+    model_registry=registry,
+    settings=settings,
+    discover_ollama_models=True,
+)
 chat_completions_service = ChatCompletionsService(router_service, settings)
 replay_service = ReplayService(router_service)
 model_health_service = ModelHealthService()

@@ -29,6 +29,7 @@ from routellm.services.analyzer import RequestAnalyzer
 from routellm.services.budget import BudgetExceededError, BudgetService
 from routellm.services.evaluation import ResponseEvaluator
 from routellm.services.execution import ExecutionService
+from routellm.services.ollama_runtime import OllamaRuntimeService
 from routellm.services.policy import PolicyEngine
 from routellm.services.registry import ModelRegistry
 from routellm.services.scoring import CandidateScorer
@@ -42,6 +43,7 @@ class RoutingService:
         model_registry: ModelRegistry,
         settings: Settings | None = None,
         execution_service: ExecutionService | None = None,
+        discover_ollama_models: bool = False,
     ) -> None:
         self.settings = settings or get_settings()
         self.model_registry = model_registry
@@ -53,10 +55,15 @@ class RoutingService:
         self.execution_service = execution_service or ExecutionService(self.settings)
         self.budget_ledger = InMemoryTenantBudgetLedger()
         self.workflow = RoutingWorkflow(self.analyzer, self.policy_engine, self.scorer)
+        self.ollama_runtime = OllamaRuntimeService(timeout_seconds=3.0)
+        self.discover_ollama_models = discover_ollama_models
 
     async def route(self, request: RouteRequest) -> RouteResponse:
         started_at = perf_counter()
         models = self.model_registry.list_models()
+        if self.discover_ollama_models:
+            discovered = await self.ollama_runtime.discover_models(models)
+            models.extend(discovered)
         workflow_state = self.workflow.run(request, models)
         analysis = workflow_state["analysis"]
         policy = workflow_state["policy"]
