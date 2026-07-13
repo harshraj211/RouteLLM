@@ -27,7 +27,7 @@ def test_chat_completion_returns_openai_compatible_response() -> None:
     data = response.json()
     assert data["id"] == "chatcmpl-client-request-123"
     assert data["object"] == "chat.completion"
-    assert data["model"] == "local-small"
+    assert data["model"] == "qwen2.5:3b"
     assert data["choices"][0]["message"]["role"] == "assistant"
     assert data["choices"][0]["finish_reason"] == "stop"
     assert data["usage"]["total_tokens"] == (
@@ -37,20 +37,20 @@ def test_chat_completion_returns_openai_compatible_response() -> None:
     assert response.headers["X-RouteLLM-Selected-Model"] == "local-small"
 
 
-def test_chat_completion_can_pin_upstream_model_id() -> None:
+def test_chat_completion_can_pin_local_model_id() -> None:
     client = TestClient(app)
 
     response = client.post(
         "/v1/chat/completions",
         json={
-            "model": "gpt-5-mini",
+            "model": "qwen2.5:3b",
             "messages": [{"role": "user", "content": "Use the requested model"}],
         },
     )
 
     assert response.status_code == 200
-    assert response.json()["model"] == "gpt-5-mini"
-    assert response.headers["X-RouteLLM-Selected-Model"] == "hosted-premium"
+    assert response.json()["model"] == "qwen2.5:3b"
+    assert response.headers["X-RouteLLM-Selected-Model"] == "local-small"
 
 
 def test_chat_completion_auto_routes_coding_to_stronger_model() -> None:
@@ -70,8 +70,8 @@ def test_chat_completion_auto_routes_coding_to_stronger_model() -> None:
     )
 
     assert response.status_code == 200
-    assert response.json()["model"] == "gpt-5.3-codex"
-    assert response.headers["X-RouteLLM-Selected-Model"] == "openai-codex"
+    assert response.json()["model"] == "qwen2.5-coder:7b"
+    assert response.headers["X-RouteLLM-Selected-Model"] == "local-coder"
 
 
 def test_chat_completion_unknown_model_uses_openai_error_shape() -> None:
