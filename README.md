@@ -78,7 +78,13 @@ The same data is available for automation:
 GET /v1/analytics/summary
 GET /v1/analytics/decisions
 GET /v1/runtime/ollama
+POST /v1/replay/compare-default
 ```
+
+`POST /v1/replay/compare-default` runs the bundled benchmark request set through RouteLLM and
+compares its estimated route cost against an always-cloud run using the configured reference
+model. It calculates the cloud comparison locally and does not make a paid cloud inference
+call.
 
 ## Default Routing Policy
 
