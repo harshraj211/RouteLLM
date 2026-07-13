@@ -3,6 +3,7 @@ from routellm.adapters.base import InferenceAdapter, InferenceAdapterError, Infe
 from routellm.adapters.gemini import GeminiInferenceAdapter
 from routellm.adapters.hosted import HostedInferenceAdapter
 from routellm.adapters.mock import MockInferenceAdapter
+from routellm.adapters.ollama import OllamaInferenceAdapter
 from routellm.adapters.vllm import VLLMInferenceAdapter
 from routellm.config import Settings, get_settings
 from routellm.schemas.models import ModelDescriptor
@@ -25,6 +26,7 @@ class ExecutionService:
                 "hosted": mock_adapter,
                 "anthropic": mock_adapter,
                 "gemini": mock_adapter,
+                "ollama": mock_adapter,
             }
         else:
             self._adapters = {
@@ -38,6 +40,9 @@ class ExecutionService:
                     timeout_seconds=settings.inference_timeout_seconds,
                 ),
                 "gemini": GeminiInferenceAdapter(
+                    timeout_seconds=settings.inference_timeout_seconds,
+                ),
+                "ollama": OllamaInferenceAdapter(
                     timeout_seconds=settings.inference_timeout_seconds,
                 ),
             }
