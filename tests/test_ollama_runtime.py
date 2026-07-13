@@ -43,7 +43,9 @@ async def test_inspect_reports_unreachable_ollama() -> None:
         raise httpx.ConnectError("connection refused", request=request)
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
-        statuses = await OllamaRuntimeService(client=client).inspect([_model("local-fast", "qwen2.5:3b")])
+        statuses = await OllamaRuntimeService(client=client).inspect(
+            [_model("local-fast", "qwen2.5:3b")]
+        )
 
     assert statuses[0].reachable is False
     assert statuses[0].configured_models[0].installed is False
