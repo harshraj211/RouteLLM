@@ -19,12 +19,14 @@ from routellm.schemas.routing import (
     RouteResponse,
     RoutingDecisionRecordResponse,
 )
+from routellm.schemas.runtime import OllamaRuntimeStatus
 from routellm.services.chat_completions import (
     ChatCompletionsService,
     ChatRoutingControls,
     UnsupportedChatCompletionRequest,
 )
 from routellm.services.model_health import ModelHealthService
+from routellm.services.ollama_runtime import OllamaRuntimeService
 from routellm.services.policy_store import InMemoryPolicyStore
 from routellm.services.registry import (
     ModelAlreadyExistsError,
@@ -43,6 +45,9 @@ router_service = RoutingService(model_registry=registry, settings=settings)
 chat_completions_service = ChatCompletionsService(router_service, settings)
 replay_service = ReplayService(router_service)
 model_health_service = ModelHealthService()
+ollama_runtime_service = OllamaRuntimeService(
+    timeout_seconds=min(settings.inference_timeout_seconds, 3.0),
+)
 
 
 @api_router.get("/healthz", response_model=HealthResponse, tags=["system"])
@@ -72,6 +77,13 @@ async def create_model(model: ModelDescriptor) -> ModelDescriptor:
 @api_router.get("/models/health", response_model=list[ModelHealthSnapshot], tags=["models"])
 async def list_model_health() -> list[ModelHealthSnapshot]:
     return model_health_service.summarize(registry.list_models(include_disabled=True))
+
+
+@api_router.get("/runtime/ollama", response_model=list[OllamaRuntimeStatus], tags=["system"])
+async def inspect_ollama_runtime() -> list[OllamaRuntimeStatus]:
+    """Report whether configured local Ollama models are available to RouteLLM."""
+
+    return await ollama_runtime_service.inspect(registry.list_models())
 
 
 @api_router.post("/models/reload", response_model=list[ModelDescriptor], tags=["models"])
