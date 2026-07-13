@@ -8,6 +8,7 @@ from routellm.db.session import get_session
 from routellm.observability.metrics import ACTIVE_REQUESTS
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
 from routellm.schemas.analytics import AnalyticsDecision, AnalyticsSummary
+from routellm.schemas.benchmark import BenchmarkComparisonResponse
 from routellm.schemas.budget import TenantBudgetSnapshot
 from routellm.schemas.chat_completions import ChatCompletionRequest
 from routellm.schemas.health import ModelHealthSnapshot
@@ -188,6 +189,17 @@ async def replay_default_benchmark() -> ReplaySummaryResponse:
         requests_replayed=summary.requests_replayed,
         average_estimated_cost_usd=summary.average_estimated_cost_usd,
         selected_models=summary.selected_models,
+    )
+
+
+@api_router.post(
+    "/replay/compare-default",
+    response_model=BenchmarkComparisonResponse,
+    tags=["evals"],
+)
+async def compare_default_benchmark() -> BenchmarkComparisonResponse:
+    return await replay_service.compare_default_benchmark(
+        reference_cloud_model_key=settings.analytics_baseline_model_key,
     )
 
 
