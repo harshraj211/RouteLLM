@@ -21,37 +21,38 @@ settings.
 
 ## Decision
 
-RouteLLM will become an agent-native control plane with an MCP server as its primary
-integration surface.
+RouteLLM will operate as a local-first inference gateway with an OpenAI-compatible HTTP API
+as its primary integration surface. An MCP server remains an optional companion for task
+guidance in compatible agent hosts.
 
-The MCP server will:
+The inference gateway will:
 
 - classify the requested task locally and deterministically;
-- return an explainable execution policy for the active agent;
-- recommend a task mode, verification level, and optional local-model fallback;
-- expose no credential requirement for its default path;
-- record the platform capability boundary in every recommendation.
+- route requests to configured local models before paid provider profiles;
+- expose an OpenAI-compatible client endpoint;
+- record selection, cost, latency, retries, and fallback decisions;
+- require an explicit configuration change before a paid cloud model is eligible.
 
-The default execution target is `current_agent`. This means Codex, Claude Cowork, or
-Antigravity performs the task using the model and entitlement already available in that
-application. RouteLLM guides the work but does not claim to switch the host application's
-model.
+The default inference target is a local Ollama-compatible endpoint. This avoids per-token
+provider API charges, while still making the local hardware cost visible to the user.
 
-The existing HTTP inference proxy remains available as an optional advanced deployment mode.
-It is no longer the default product story or the only way to use RouteLLM.
+The MCP server returns `current_agent` task guidance and does not claim to switch the host
+application's internal model. Codex, Claude Cowork, and similar subscription products remain
+separate from the gateway unless they expose a supported custom-inference configuration.
 
 ## Consequences
 
 Benefits:
 
-- individual users can install and use the default workflow without API keys;
+- individual users can run the default gateway without provider API keys;
+- simple requests can be served by local models instead of consuming cloud credits;
 - routing decisions stay local, explainable, and testable;
-- one server can be configured in any MCP-capable agent host;
+- OpenAI-compatible applications can use one local gateway endpoint;
 - advanced users can still opt into a local model runtime or provider-backed proxy later.
 
 Trade-offs:
 
-- RouteLLM cannot force a host application to switch its own subscription model;
+- RouteLLM cannot redirect a host application's internal subscription model through MCP;
 - model-specific cost calculations are unavailable in the zero-key path;
 - host integrations need clear, per-client setup guides rather than an assumption of feature
   parity.
