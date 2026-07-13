@@ -8,6 +8,7 @@ from routellm.schemas.analytics import AnalyticsDecision, AnalyticsSummary, Mode
 from routellm.schemas.models import ModelDescriptor
 
 _LOCAL_PROVIDERS = frozenset({"ollama", "vllm"})
+_LEGACY_LOCAL_MODEL_KEYS = frozenset({"local-small", "local-medium-json"})
 
 
 class AnalyticsService:
@@ -117,4 +118,7 @@ class AnalyticsService:
     @staticmethod
     def _is_local(model_key: str, model_by_key: dict[str, ModelDescriptor]) -> bool:
         model = model_by_key.get(model_key)
-        return model is not None and model.provider in _LOCAL_PROVIDERS
+        return (
+            model_key in _LEGACY_LOCAL_MODEL_KEYS
+            or (model is not None and model.provider in _LOCAL_PROVIDERS)
+        )
