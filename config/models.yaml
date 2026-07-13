@@ -1,0 +1,82 @@
+version: 1
+models:
+  - key: local-small
+    provider: vllm
+    display_name: Local Small
+    model_id: ${ROUTELLM_LOCAL_SMALL_MODEL:-local-small}
+    endpoint: ${ROUTELLM_LOCAL_SMALL_BASE_URL:-http://localhost:8001/v1}
+    quality_tier: 1
+    supports_structured_output: false
+    max_context_tokens: 8192
+    pricing:
+      input_cost_per_1k_tokens: 0.0003
+      output_cost_per_1k_tokens: 0.0005
+    latency:
+      p50_ms: 350
+      p95_ms: 900
+  - key: local-medium-json
+    provider: vllm
+    display_name: Local Medium JSON
+    model_id: ${ROUTELLM_LOCAL_MEDIUM_MODEL:-local-medium-json}
+    endpoint: ${ROUTELLM_LOCAL_MEDIUM_BASE_URL:-http://localhost:8002/v1}
+    quality_tier: 2
+    supports_structured_output: true
+    max_context_tokens: 16384
+    pricing:
+      input_cost_per_1k_tokens: 0.0008
+      output_cost_per_1k_tokens: 0.0011
+    latency:
+      p50_ms: 700
+      p95_ms: 1800
+  - key: hosted-premium
+    provider: hosted
+    display_name: Hosted Premium
+    model_id: ${ROUTELLM_HOSTED_MODEL:-gpt-5-mini}
+    endpoint: ${ROUTELLM_HOSTED_BASE_URL:-https://api.openai.com/v1}
+    api_key_env: OPENAI_API_KEY
+    requires_api_key: true
+    max_output_tokens_param: max_completion_tokens
+    quality_tier: 3
+    supports_structured_output: true
+    max_context_tokens: 128000
+    pricing:
+      input_cost_per_1k_tokens: 0.01
+      output_cost_per_1k_tokens: 0.03
+    latency:
+      p50_ms: 1200
+      p95_ms: 2500
+  - key: gemini-3.5-flash
+    enabled: false
+    provider: gemini
+    display_name: Gemini 3.5 Flash
+    model_id: gemini-3.5-flash
+    endpoint: https://generativelanguage.googleapis.com/v1beta
+    api_key_env: GEMINI_API_KEY
+    requires_api_key: true
+    quality_tier: 3
+    supports_structured_output: true
+    max_context_tokens: 1048576
+    pricing:
+      input_cost_per_1k_tokens: 0.0015
+      output_cost_per_1k_tokens: 0.009
+    latency:
+      p50_ms: 1500
+      p95_ms: 5000
+  - key: grok-4.5
+    enabled: false
+    provider: hosted
+    display_name: Grok 4.5
+    model_id: grok-4.5
+    endpoint: https://api.x.ai/v1
+    api_key_env: XAI_API_KEY
+    requires_api_key: true
+    max_output_tokens_param: max_completion_tokens
+    quality_tier: 3
+    supports_structured_output: true
+    max_context_tokens: 500000
+    pricing:
+      input_cost_per_1k_tokens: 0.002
+      output_cost_per_1k_tokens: 0.006
+    latency:
+      p50_ms: 1800
+      p95_ms: 6000

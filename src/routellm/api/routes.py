@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi import APIRouter, Header, HTTPException, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from routellm.adapters.base import InferenceAdapterError
+from routellm.config import get_settings
 from routellm.db.session import get_session
 from routellm.observability.metrics import ACTIVE_REQUESTS
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
 from routellm.schemas.budget import TenantBudgetSnapshot
+from routellm.schemas.chat_completions import ChatCompletionRequest
 from routellm.schemas.health import ModelHealthSnapshot
 from routellm.schemas.models import ModelDescriptor
 from routellm.schemas.policies import RoutingPolicy
@@ -16,16 +19,28 @@ from routellm.schemas.routing import (
     RouteResponse,
     RoutingDecisionRecordResponse,
 )
-from routellm.services.policy_store import InMemoryPolicyStore
-from routellm.services.registry import InMemoryModelRegistry
+from routellm.services.chat_completions import (
+    ChatCompletionsService,
+    ChatRoutingControls,
+    UnsupportedChatCompletionRequest,
+)
 from routellm.services.model_health import ModelHealthService
+from routellm.services.policy_store import InMemoryPolicyStore
+from routellm.services.registry import (
+    ModelAlreadyExistsError,
+    ModelNotFoundError,
+    ModelRegistryValidationError,
+    YamlModelRegistry,
+)
 from routellm.services.replay_service import ReplayService
 from routellm.services.router import RoutingService
 
 api_router = APIRouter()
-registry = InMemoryModelRegistry.bootstrap_defaults()
+settings = get_settings()
+registry = YamlModelRegistry.from_settings(settings)
 policy_store = InMemoryPolicyStore.bootstrap_defaults()
-router_service = RoutingService(model_registry=registry)
+router_service = RoutingService(model_registry=registry, settings=settings)
+chat_completions_service = ChatCompletionsService(router_service, settings)
 replay_service = ReplayService(router_service)
 model_health_service = ModelHealthService()
 
@@ -37,12 +52,70 @@ async def healthcheck() -> HealthResponse:
 
 @api_router.get("/models", response_model=list[ModelDescriptor], tags=["models"])
 async def list_models() -> list[ModelDescriptor]:
-    return registry.list_models()
+    return registry.list_models(include_disabled=True)
+
+
+@api_router.post(
+    "/models",
+    response_model=ModelDescriptor,
+    status_code=201,
+    tags=["models"],
+)
+async def create_model(model: ModelDescriptor) -> ModelDescriptor:
+    _ensure_registry_writes_enabled()
+    try:
+        return registry.create_model(model)
+    except ModelAlreadyExistsError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @api_router.get("/models/health", response_model=list[ModelHealthSnapshot], tags=["models"])
 async def list_model_health() -> list[ModelHealthSnapshot]:
-    return model_health_service.summarize(registry.list_models())
+    return model_health_service.summarize(registry.list_models(include_disabled=True))
+
+
+@api_router.post("/models/reload", response_model=list[ModelDescriptor], tags=["models"])
+async def reload_models() -> list[ModelDescriptor]:
+    try:
+        return registry.reload()
+    except ModelRegistryValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@api_router.get("/models/{model_key}", response_model=ModelDescriptor, tags=["models"])
+async def get_model(model_key: str) -> ModelDescriptor:
+    model = registry.get_model(model_key)
+    if model is None:
+        raise HTTPException(status_code=404, detail=f"Model {model_key!r} was not found.")
+    return model
+
+
+@api_router.put("/models/{model_key}", response_model=ModelDescriptor, tags=["models"])
+async def update_model(model_key: str, model: ModelDescriptor) -> ModelDescriptor:
+    _ensure_registry_writes_enabled()
+    if model.key != model_key:
+        raise HTTPException(
+            status_code=400,
+            detail="The model key in the path must match the request body.",
+        )
+    if registry.get_model(model_key) is None:
+        raise HTTPException(status_code=404, detail=f"Model {model_key!r} was not found.")
+    return registry.upsert_model(model)
+
+
+@api_router.delete("/models/{model_key}", status_code=204, tags=["models"])
+async def delete_model(model_key: str) -> Response:
+    _ensure_registry_writes_enabled()
+    try:
+        registry.delete_model(model_key)
+    except ModelNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return Response(status_code=204)
+
+
+def _ensure_registry_writes_enabled() -> None:
+    if not settings.model_registry_writes_enabled:
+        raise HTTPException(status_code=403, detail="Model registry writes are disabled.")
 
 
 @api_router.get("/policies", response_model=list[RoutingPolicy], tags=["policies"])
@@ -80,9 +153,122 @@ async def metrics() -> PlainTextResponse:
 async def route_request(payload: RouteRequest) -> RouteResponse:
     ACTIVE_REQUESTS.inc()
     try:
-        return await router_service.route(payload)
+        try:
+            return await router_service.route(payload)
+        except InferenceAdapterError as exc:
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "code": "UPSTREAM_MODEL_ERROR",
+                    "model": exc.model_key,
+                    "message": str(exc),
+                    "retryable": exc.retryable,
+                },
+            ) from exc
     finally:
         ACTIVE_REQUESTS.dec()
+
+
+@api_router.post("/chat/completions", response_model=None, tags=["compatibility"])
+async def create_chat_completion(
+    payload: ChatCompletionRequest,
+    x_routellm_tenant_id: str | None = Header(default=None, alias="X-RouteLLM-Tenant-Id"),
+    x_routellm_workflow_id: str | None = Header(default=None, alias="X-RouteLLM-Workflow-Id"),
+    x_routellm_task_type: str | None = Header(default=None, alias="X-RouteLLM-Task-Type"),
+    x_routellm_max_budget_usd: float | None = Header(
+        default=None,
+        alias="X-RouteLLM-Max-Budget-USD",
+        gt=0,
+    ),
+    x_routellm_latency_slo_ms: int | None = Header(
+        default=None,
+        alias="X-RouteLLM-Latency-SLO-MS",
+        gt=0,
+    ),
+    x_request_id: str | None = Header(default=None, alias="X-Request-Id"),
+) -> Response:
+    controls = ChatRoutingControls(
+        tenant_id=x_routellm_tenant_id or settings.chat_default_tenant_id,
+        workflow_id=x_routellm_workflow_id or settings.chat_default_workflow_id,
+        task_type=x_routellm_task_type or settings.chat_default_task_type,
+        max_budget_usd=x_routellm_max_budget_usd or settings.chat_default_max_budget_usd,
+        latency_slo_ms=x_routellm_latency_slo_ms or settings.chat_default_latency_slo_ms,
+        request_id=x_request_id,
+    )
+
+    ACTIVE_REQUESTS.inc()
+    try:
+        try:
+            route_response = await chat_completions_service.complete(payload, controls)
+        except UnsupportedChatCompletionRequest as exc:
+            return _chat_error_response(
+                status_code=400,
+                message=str(exc),
+                error_type="invalid_request_error",
+                code=exc.code,
+                param=exc.param,
+            )
+        except InferenceAdapterError as exc:
+            return _chat_error_response(
+                status_code=502,
+                message=str(exc),
+                error_type="upstream_error",
+                code=exc.reason_code.lower(),
+            )
+        except HTTPException as exc:
+            message = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
+            return _chat_error_response(
+                status_code=exc.status_code,
+                message=message,
+                error_type="invalid_request_error",
+                code="routing_error",
+            )
+    finally:
+        ACTIVE_REQUESTS.dec()
+
+    completion = chat_completions_service.to_response(route_response)
+    headers = {
+        "X-Request-Id": route_response.request_id,
+        "X-RouteLLM-Selected-Model": route_response.decision.selected_model,
+        "X-RouteLLM-Execution-Attempts": str(len(route_response.execution_attempts)),
+    }
+    if payload.stream:
+        include_usage = bool(payload.stream_options and payload.stream_options.include_usage)
+        headers["Cache-Control"] = "no-cache"
+        headers["X-Accel-Buffering"] = "no"
+        return StreamingResponse(
+            chat_completions_service.stream_response(
+                completion,
+                include_usage=include_usage,
+            ),
+            media_type="text/event-stream",
+            headers=headers,
+        )
+    return JSONResponse(
+        completion.model_dump(exclude_none=True),
+        headers=headers,
+    )
+
+
+def _chat_error_response(
+    *,
+    status_code: int,
+    message: str,
+    error_type: str,
+    code: str,
+    param: str | None = None,
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": {
+                "message": message,
+                "type": error_type,
+                "param": param,
+                "code": code,
+            }
+        },
+    )
 
 
 @api_router.get("/decisions", response_model=list[RoutingDecisionRecordResponse], tags=["routing"])
@@ -111,7 +297,9 @@ async def list_decisions(limit: int = 50) -> list[RoutingDecisionRecordResponse]
         session.close()
 
 
-@api_router.get("/decisions/{decision_id}", response_model=RoutingDecisionRecordResponse, tags=["routing"])
+@api_router.get(
+    "/decisions/{decision_id}", response_model=RoutingDecisionRecordResponse, tags=["routing"]
+)
 async def get_decision(decision_id: int) -> RoutingDecisionRecordResponse:
     session = get_session()
     try:

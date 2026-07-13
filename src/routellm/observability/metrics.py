@@ -27,6 +27,24 @@ ACTIVE_REQUESTS = Gauge(
 
 ESCALATION_COUNTER = Counter(
     "routellm_escalations_total",
-    "Number of requests escalated to a stronger model.",
+    "Number of requests routed from one candidate model to another.",
     ["task_type", "workflow_id"],
+)
+
+INFERENCE_FAILURE_COUNTER = Counter(
+    "routellm_inference_failures_total",
+    "Number of failed upstream inference attempts.",
+    ["model", "reason_code", "retryable"],
+)
+
+INFERENCE_RETRY_COUNTER = Counter(
+    "routellm_inference_retries_total",
+    "Number of same-model upstream inference retries.",
+    ["model", "reason_code"],
+)
+
+MODEL_FAILOVER_COUNTER = Counter(
+    "routellm_model_failovers_total",
+    "Number of upstream transport failovers between models.",
+    ["from_model", "to_model", "reason_code"],
 )

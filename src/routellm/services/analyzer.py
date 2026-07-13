@@ -17,7 +17,9 @@ class RequestAnalyzer:
     def analyze(self, request: RouteRequest) -> RequestAnalysis:
         total_chars = sum(len(message.content) for message in request.messages)
         estimated_input_tokens = max(1, total_chars // 4)
-        estimated_output_tokens = 256 if request.response_format == "json" else 180
+        estimated_output_tokens = request.max_output_tokens or (
+            256 if request.response_format == "json" else 180
+        )
 
         risk_level = "high" if request.task_type in {"codegen", "sql", "legal"} else "medium"
         complexity_score = min(1.0, estimated_input_tokens / 4000)
