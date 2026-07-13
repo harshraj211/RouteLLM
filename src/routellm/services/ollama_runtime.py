@@ -66,6 +66,7 @@ class OllamaRuntimeService:
                     )
                     for model in configured_models
                 ],
+                installed_models=[],
                 detail=f"Could not reach Ollama: {exc}",
             )
 
@@ -82,6 +83,7 @@ class OllamaRuntimeService:
             endpoint=endpoint,
             reachable=True,
             configured_models=readiness,
+            installed_models=sorted(installed_models),
             detail=(
                 f"Missing configured models: {', '.join(missing_models)}"
                 if missing_models

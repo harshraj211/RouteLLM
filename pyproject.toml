@@ -45,6 +45,7 @@ dev = [
 packages = ["src/routellm"]
 
 [project.scripts]
+routellm = "routellm.cli:main"
 routellm-mcp = "routellm.agent_native.mcp_server:main"
 
 [tool.pytest.ini_options]

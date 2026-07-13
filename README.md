@@ -65,6 +65,22 @@ The local coder model may take longer than 30 seconds on its first request, espe
 CPU-only machine. RouteLLM therefore gives Ollama a separate 300-second timeout by default.
 Set `ROUTELLM_OLLAMA_INFERENCE_TIMEOUT_SECONDS` in `.env` to adjust it.
 
+## Terminal Command
+
+With the gateway running, install the editable package once and then ask a question directly:
+
+```powershell
+python -m pip install -e ".[dev]"
+routellm "Explain Python decorators simply"
+routellm "Write a Python function for binary search and add unit tests."
+routellm models
+```
+
+`routellm` prints the selected RouteLLM model and answer. `routellm models` lists every
+model installed in the connected Ollama server; the `/v1/runtime/ollama` endpoint exposes
+the same installed-model list as JSON. The router still uses only models configured in
+`config/models.yaml` until additional models are added to that routing registry.
+
 ## Control Room
 
 Open `http://localhost:8000/dashboard` while the gateway is running. The local dashboard

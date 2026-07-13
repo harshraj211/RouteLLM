@@ -11,4 +11,5 @@ class OllamaRuntimeStatus(BaseModel):
     endpoint: str
     reachable: bool
     configured_models: list[LocalModelReadiness]
+    installed_models: list[str] = []
     detail: str | None = None

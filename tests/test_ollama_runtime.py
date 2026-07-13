@@ -34,6 +34,7 @@ async def test_inspect_reports_installed_and_missing_configured_models() -> None
     assert len(statuses) == 1
     assert statuses[0].reachable is True
     assert [item.installed for item in statuses[0].configured_models] == [True, False]
+    assert statuses[0].installed_models == ["qwen2.5:3b"]
     assert statuses[0].detail == "Missing configured models: qwen2.5-coder:7b"
 
 
@@ -49,4 +50,5 @@ async def test_inspect_reports_unreachable_ollama() -> None:
 
     assert statuses[0].reachable is False
     assert statuses[0].configured_models[0].installed is False
+    assert statuses[0].installed_models == []
     assert "Could not reach Ollama" in (statuses[0].detail or "")
