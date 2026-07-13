@@ -18,11 +18,25 @@ class CandidateScorer:
         availability_bonus = model.health_score * 0.4
         latency_penalty = model.latency.p95_ms / 1000
         complexity_bonus = analysis.complexity_score * model.quality_tier
+        semantic_affinity = model.task_affinities.get(
+            analysis.semantic_intent,
+            model.task_affinities.get("general_qa", 0.5),
+        )
+        capability_coverage = self._capability_coverage(model, analysis)
 
         return (
             quality_bonus
             + availability_bonus
             + complexity_bonus
+            + (semantic_affinity * 2.0)
+            + (capability_coverage * 0.75)
             - latency_penalty
             - (estimated_cost * 100)
         )
+
+    @staticmethod
+    def _capability_coverage(model: ModelDescriptor, analysis: RequestAnalysis) -> float:
+        if not analysis.required_capabilities:
+            return 1.0
+        matched = analysis.required_capabilities.intersection(model.capabilities)
+        return len(matched) / len(analysis.required_capabilities)

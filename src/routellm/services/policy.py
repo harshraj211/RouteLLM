@@ -23,7 +23,7 @@ class PolicyEngine:
         models: list[ModelDescriptor],
     ) -> PolicyDecision:
         eligible_models = models
-        reason_codes: list[str] = []
+        reason_codes: list[str] = [f"SEMANTIC_INTENT_{analysis.semantic_intent.upper()}"]
         if request.requested_model:
             eligible_models = [
                 model for model in models if request.requested_model in {model.key, model.model_id}
@@ -47,6 +47,15 @@ class PolicyEngine:
         if request.response_format == "json":
             filtered = [model for model in filtered if model.supports_structured_output]
             reason_codes.append("STRUCTURED_OUTPUT_REQUIRED")
+
+        capability_matches = [
+            model
+            for model in filtered
+            if analysis.required_capabilities.issubset(model.capabilities)
+        ]
+        if capability_matches:
+            filtered = capability_matches
+            reason_codes.append("SEMANTIC_CAPABILITY_MATCH_APPLIED")
 
         if not filtered:
             filtered = sorted(eligible_models, key=lambda model: model.quality_tier, reverse=True)

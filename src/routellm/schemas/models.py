@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, HttpUrl, model_validator
 
@@ -32,6 +32,10 @@ class ModelDescriptor(BaseModel):
     max_output_tokens_param: Literal["max_tokens", "max_completion_tokens"] = "max_tokens"
     quality_tier: int = Field(ge=1, le=5)
     supports_structured_output: bool = False
+    capabilities: set[str] = Field(default_factory=set)
+    task_affinities: dict[str, Annotated[float, Field(ge=0.0, le=1.0)]] = Field(
+        default_factory=dict
+    )
     max_context_tokens: int = Field(gt=0)
     pricing: ModelPricing
     latency: ModelLatencyProfile
