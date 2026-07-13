@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from routellm.main import app
 
 
-def test_route_rejects_when_budget_is_too_low() -> None:
+def test_route_allows_zero_budget_for_a_zero_cost_local_model() -> None:
     client = TestClient(app)
     payload = {
         "tenant_id": "demo",
@@ -16,5 +16,6 @@ def test_route_rejects_when_budget_is_too_low() -> None:
 
     response = client.post("/v1/route", json=payload)
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "No candidate model satisfies the request budget."
+    assert response.status_code == 200
+    assert response.json()["decision"]["selected_model"] == "local-small"
+    assert response.json()["usage"]["actual_cost_usd"] == 0.0
