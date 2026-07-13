@@ -30,22 +30,22 @@ def _route(prompt: str, *, response_format: str = "text"):
     [
         ("Hello, how are you?", "general_qa", "local-small"),
         (
-            "Write a Python function and unit tests for binary search.",
-            "coding",
-            "openai-codex",
+                "Write a Python function and unit tests for binary search.",
+                "coding",
+                "local-coder",
         ),
         (
-            "Research and compare sources about transformer efficiency.",
-            "research",
-            "gemini-3.5-flash",
+                "Research and compare sources about transformer efficiency.",
+                "research",
+                "local-coder",
         ),
         (
-            "Draft a moving short story about memory.",
-            "creative_writing",
-            "claude-sonnet",
+                "Draft a moving short story about memory.",
+                "creative_writing",
+                "local-small",
         ),
-        ("Review this contract clause for legal risks.", "legal", "claude-sonnet"),
-        ("Solve this calculus derivative equation.", "math", "gemini-3.5-flash"),
+        ("Review this contract clause for legal risks.", "legal", "local-coder"),
+        ("Solve this calculus derivative equation.", "math", "local-coder"),
     ],
 )
 def test_prompt_semantics_change_selected_model(
@@ -68,7 +68,7 @@ def test_json_extraction_prefers_structured_extraction_model() -> None:
     )
 
     assert state["analysis"].semantic_intent == "extraction"
-    assert state["ranked_candidates"][0].key == "local-medium-json"
+    assert state["ranked_candidates"][0].key == "local-coder"
     assert all(model.supports_structured_output for model in state["ranked_candidates"])
 
 
