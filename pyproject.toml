@@ -28,7 +28,8 @@ dependencies = [
   "opentelemetry-sdk>=1.26.0",
   "opentelemetry-instrumentation-fastapi>=0.47b0",
   "opentelemetry-exporter-otlp>=1.26.0",
-  "langgraph>=0.2.14"
+  "langgraph>=0.2.14",
+  "mcp>=1.0.0"
 ]
 
 [project.optional-dependencies]
@@ -42,6 +43,9 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/routellm"]
+
+[project.scripts]
+routellm-mcp = "routellm.agent_native.mcp_server:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
