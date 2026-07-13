@@ -21,3 +21,4 @@ def test_route_response_exposes_structured_escalation_path() -> None:
     data = response.json()
     assert "escalation_path" in data
     assert isinstance(data["escalation_path"], list)
+    assert data["execution_attempts"][0]["outcome"] == "success"
