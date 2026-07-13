@@ -108,6 +108,22 @@ Cloud profiles are retained in [models.yaml](config/models.yaml) but ship with
 This makes every paid path opt-in and auditable. RouteLLM tracks selection, estimated cost,
 actual reported usage, latency, retries, and failover in its decision log.
 
+When cloud profiles are enabled, RouteLLM applies a ranked specialist preference before
+falling back to the broader cost and latency score:
+
+| Prompt intent | First-choice specialist |
+| --- | --- |
+| Coding and repository work | `openai-codex` |
+| Research and source comparison | `gemini-3.5-flash` |
+| Legal and contract review | `claude-sonnet` |
+| Creative writing | `claude-sonnet` |
+| Math and deep reasoning | `hosted-premium` |
+| Current news, trends, and updates | `grok-4.5` |
+
+These preferences are not hard locks. If the preferred model is disabled, missing
+credentials, unhealthy, or outside the request budget, RouteLLM keeps ranking the remaining
+eligible models and can still use a local fallback.
+
 ## Codex, Claude, and Other Agents
 
 The gateway can control inference only for clients that send their model requests through it.
