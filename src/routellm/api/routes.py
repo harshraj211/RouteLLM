@@ -7,6 +7,7 @@ from routellm.config import get_settings
 from routellm.db.session import get_session
 from routellm.observability.metrics import ACTIVE_REQUESTS
 from routellm.repositories.routing_decisions import RoutingDecisionRepository
+from routellm.schemas.analytics import AnalyticsDecision, AnalyticsSummary
 from routellm.schemas.budget import TenantBudgetSnapshot
 from routellm.schemas.chat_completions import ChatCompletionRequest
 from routellm.schemas.health import ModelHealthSnapshot
@@ -20,6 +21,7 @@ from routellm.schemas.routing import (
     RoutingDecisionRecordResponse,
 )
 from routellm.schemas.runtime import OllamaRuntimeStatus
+from routellm.services.analytics import AnalyticsService
 from routellm.services.chat_completions import (
     ChatCompletionsService,
     ChatRoutingControls,
@@ -45,6 +47,7 @@ router_service = RoutingService(model_registry=registry, settings=settings)
 chat_completions_service = ChatCompletionsService(router_service, settings)
 replay_service = ReplayService(router_service)
 model_health_service = ModelHealthService()
+analytics_service = AnalyticsService()
 ollama_runtime_service = OllamaRuntimeService(
     timeout_seconds=min(settings.inference_timeout_seconds, 3.0),
 )
@@ -143,6 +146,38 @@ async def create_or_update_policy(policy: RoutingPolicy) -> RoutingPolicy:
 @api_router.get("/budgets/{tenant_id}", response_model=TenantBudgetSnapshot, tags=["budgets"])
 async def get_tenant_budget_snapshot(tenant_id: str) -> TenantBudgetSnapshot:
     return router_service.budget_ledger.get_snapshot(tenant_id)
+
+
+@api_router.get("/analytics/summary", response_model=AnalyticsSummary, tags=["analytics"])
+async def get_analytics_summary() -> AnalyticsSummary:
+    session = get_session()
+    try:
+        records = RoutingDecisionRepository(session).list_recent(limit=10_000)
+        return analytics_service.summarize(
+            records,
+            registry.list_models(include_disabled=True),
+            baseline_model_key=settings.analytics_baseline_model_key,
+        )
+    finally:
+        session.close()
+
+
+@api_router.get(
+    "/analytics/decisions",
+    response_model=list[AnalyticsDecision],
+    tags=["analytics"],
+)
+async def list_analytics_decisions(limit: int = 50) -> list[AnalyticsDecision]:
+    session = get_session()
+    try:
+        records = RoutingDecisionRepository(session).list_recent(limit=limit)
+        return analytics_service.decisions(
+            records,
+            registry.list_models(include_disabled=True),
+            baseline_model_key=settings.analytics_baseline_model_key,
+        )
+    finally:
+        session.close()
 
 
 @api_router.post("/replay/default", response_model=ReplaySummaryResponse, tags=["evals"])
