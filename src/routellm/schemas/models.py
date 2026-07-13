@@ -24,6 +24,10 @@ class ModelDescriptor(BaseModel):
     key: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9._-]*$")
     enabled: bool = True
     provider: str = Field(min_length=1, pattern=r"^[a-z0-9][a-z0-9._-]*$")
+    provider_family: str | None = Field(
+        default=None,
+        pattern=r"^[a-z0-9][a-z0-9._-]*$",
+    )
     display_name: str = Field(min_length=1)
     model_id: str = Field(min_length=1)
     endpoint: HttpUrl | None = None
@@ -32,6 +36,7 @@ class ModelDescriptor(BaseModel):
     max_output_tokens_param: Literal["max_tokens", "max_completion_tokens"] = "max_tokens"
     quality_tier: int = Field(ge=1, le=5)
     supports_structured_output: bool = False
+    supports_sampling_parameters: bool = True
     capabilities: set[str] = Field(default_factory=set)
     task_affinities: dict[str, Annotated[float, Field(ge=0.0, le=1.0)]] = Field(
         default_factory=dict

@@ -196,10 +196,12 @@ class YamlModelRegistry:
         path: Path,
         models: list[ModelDescriptor],
         environment: Mapping[str, str] | None = None,
+        require_credentials: bool = False,
     ) -> None:
         self.path = path
         self._models = {model.key: model for model in models}
         self._environment = dict(environment or {})
+        self._require_credentials = require_credentials
         self._lock = RLock()
 
     @classmethod
@@ -207,8 +209,14 @@ class YamlModelRegistry:
         cls,
         path: Path,
         environment: Mapping[str, str] | None = None,
+        require_credentials: bool = False,
     ) -> "YamlModelRegistry":
-        registry = cls(path=path, models=[], environment=environment)
+        registry = cls(
+            path=path,
+            models=[],
+            environment=environment,
+            require_credentials=require_credentials,
+        )
         registry.reload()
         return registry
 
@@ -222,7 +230,15 @@ class YamlModelRegistry:
             "ROUTELLM_HOSTED_BASE_URL": settings.hosted_base_url,
             "ROUTELLM_HOSTED_MODEL": settings.hosted_model,
         }
-        return cls.from_file(settings.model_registry_path, environment=environment)
+        if settings.hosted_api_key is not None:
+            environment[settings.hosted_api_key_env] = (
+                settings.hosted_api_key.get_secret_value()
+            )
+        return cls.from_file(
+            settings.model_registry_path,
+            environment=environment,
+            require_credentials=settings.inference_mode == "live",
+        )
 
     @classmethod
     def create(cls, path: Path, models: list[ModelDescriptor]) -> "YamlModelRegistry":
@@ -236,8 +252,16 @@ class YamlModelRegistry:
             return [
                 model
                 for model in self._models.values()
-                if include_disabled or model.enabled
+                if include_disabled
+                or (model.enabled and self._has_required_credentials(model))
             ]
+
+    def _has_required_credentials(self, model: ModelDescriptor) -> bool:
+        if not self._require_credentials or not model.requires_api_key:
+            return True
+        if model.api_key_env is None:
+            return False
+        return bool(os.getenv(model.api_key_env) or self._environment.get(model.api_key_env))
 
     def get_model(self, model_key: str) -> ModelDescriptor | None:
         with self._lock:

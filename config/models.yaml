@@ -43,6 +43,7 @@ models:
       p95_ms: 1800
   - key: hosted-premium
     provider: hosted
+    provider_family: openai
     display_name: Hosted Premium
     model_id: ${ROUTELLM_HOSTED_MODEL:-gpt-5-mini}
     endpoint: ${ROUTELLM_HOSTED_BASE_URL:-https://api.openai.com/v1}
@@ -53,13 +54,13 @@ models:
     supports_structured_output: true
     capabilities: [code_generation, creative_writing, general_qa, long_context, reasoning, research, structured_output, summarization]
     task_affinities:
-      coding: 0.98
-      creative_writing: 0.9
+      coding: 0.65
+      creative_writing: 0.55
       extraction: 0.75
       general_qa: 0.65
-      legal: 0.95
+      legal: 0.6
       math: 0.95
-      research: 0.95
+      research: 0.6
       summarization: 0.85
     max_context_tokens: 128000
     pricing:
@@ -68,34 +69,88 @@ models:
     latency:
       p50_ms: 1200
       p95_ms: 2500
+  - key: openai-codex
+    provider: hosted
+    provider_family: openai
+    display_name: OpenAI GPT-5.3 Codex
+    model_id: gpt-5.3-codex
+    endpoint: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+    requires_api_key: true
+    max_output_tokens_param: max_completion_tokens
+    quality_tier: 4
+    supports_structured_output: true
+    capabilities: [code_generation, long_context, reasoning, structured_output]
+    task_affinities:
+      coding: 1.0
+      extraction: 0.65
+      general_qa: 0.45
+      math: 0.85
+      research: 0.5
+    max_context_tokens: 400000
+    pricing:
+      input_cost_per_1k_tokens: 0.00175
+      output_cost_per_1k_tokens: 0.014
+    latency:
+      p50_ms: 1800
+      p95_ms: 4000
+  - key: claude-sonnet
+    provider: anthropic
+    provider_family: anthropic
+    display_name: Claude Sonnet 5
+    model_id: claude-sonnet-5
+    endpoint: https://api.anthropic.com/v1
+    api_key_env: ANTHROPIC_API_KEY
+    requires_api_key: true
+    quality_tier: 4
+    supports_structured_output: true
+    supports_sampling_parameters: false
+    capabilities: [code_generation, creative_writing, general_qa, long_context, reasoning, research, structured_output, summarization]
+    task_affinities:
+      coding: 0.72
+      creative_writing: 1.0
+      extraction: 0.75
+      general_qa: 0.7
+      legal: 1.0
+      math: 0.9
+      research: 0.65
+      summarization: 0.9
+    max_context_tokens: 1000000
+    pricing:
+      input_cost_per_1k_tokens: 0.002
+      output_cost_per_1k_tokens: 0.01
+    latency:
+      p50_ms: 1500
+      p95_ms: 3500
   - key: gemini-3.5-flash
-    enabled: false
     provider: gemini
+    provider_family: google
     display_name: Gemini 3.5 Flash
     model_id: gemini-3.5-flash
     endpoint: https://generativelanguage.googleapis.com/v1beta
     api_key_env: GEMINI_API_KEY
     requires_api_key: true
-    quality_tier: 3
+    quality_tier: 4
     supports_structured_output: true
     capabilities: [creative_writing, general_qa, long_context, reasoning, research, structured_output, summarization]
     task_affinities:
-      creative_writing: 0.9
+      coding: 0.65
+      creative_writing: 0.65
       extraction: 0.8
       general_qa: 0.8
       math: 0.9
-      research: 0.98
+      research: 1.0
       summarization: 0.9
     max_context_tokens: 1048576
     pricing:
       input_cost_per_1k_tokens: 0.0015
       output_cost_per_1k_tokens: 0.009
     latency:
-      p50_ms: 1500
-      p95_ms: 5000
+      p50_ms: 1200
+      p95_ms: 3500
   - key: grok-4.5
-    enabled: false
     provider: hosted
+    provider_family: xai
     display_name: Grok 4.5
     model_id: grok-4.5
     endpoint: https://api.x.ai/v1
@@ -106,12 +161,12 @@ models:
     supports_structured_output: true
     capabilities: [code_generation, creative_writing, general_qa, long_context, reasoning, research, structured_output]
     task_affinities:
-      coding: 0.92
-      creative_writing: 0.85
+      coding: 0.7
+      creative_writing: 0.7
       general_qa: 0.8
-      legal: 0.85
+      legal: 0.7
       math: 0.9
-      research: 0.9
+      research: 0.7
     max_context_tokens: 500000
     pricing:
       input_cost_per_1k_tokens: 0.002
