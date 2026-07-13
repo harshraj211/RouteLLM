@@ -1,126 +1,105 @@
 # RouteLLM
 
-RouteLLM is an open-source, local-first control plane for AI coding agents.
+RouteLLM is an open-source, local-first inference gateway for agent and LLM applications.
 
-It helps Codex, Claude Cowork, Antigravity, and other MCP-capable hosts decide **how** to
-handle a task: quick vs. deep work, what to verify, and which tools to use. The default
-workflow uses the model already available in the user's agent subscription. No provider API
-key is required.
+Point an OpenAI-compatible client at RouteLLM, use `routellm-auto`, and RouteLLM chooses the
+least expensive model that satisfies the task policy. The default configuration routes to
+local Ollama models, so simple and medium-complexity work uses no provider API credits.
 
-## What It Does
+## How It Saves Credits
 
 ```text
-User task
-  -> RouteLLM MCP tool classifies it locally
-  -> returns an explainable execution policy
-  -> active agent performs the work with its existing model entitlement
+Application or agent runtime
+  -> RouteLLM /v1/chat/completions
+  -> local task analysis and cost-aware policy
+  -> local Ollama model by default
+  -> optional cloud fallback only when you enable it
 ```
 
-For example, a Python bug fix is classified as coding and receives `standard` mode, strict
-verification, repository search, and test-runner guidance. A high-risk research request gets
-`deep` mode and external-research guidance.
+Local inference is not physically free: it consumes the user's machine, power, and memory.
+It is free of per-token provider API charges. The shipped registry disables cloud models by
+default, so RouteLLM cannot accidentally spend OpenAI, Anthropic, Google, or xAI credits.
 
-## What It Does Not Claim
+## Quick Start: Local Gateway
 
-RouteLLM does not silently switch the internal model used by Codex, Claude Cowork, or
-Antigravity. MCP gives an agent tools; it does not give a tool authority over the host's
-model picker or subscription. RouteLLM makes that boundary visible with
-`model_control: host_managed` in every recommendation.
+1. Install [Ollama](https://ollama.com/), then download the two default local models:
 
-## Quick Start
+   ```powershell
+   ollama pull qwen2.5:3b
+   ollama pull qwen2.5-coder:7b
+   ```
 
-```powershell
-git clone https://github.com/harshraj211/RouteLLM.git
-cd RouteLLM
-python -m pip install -e .
-```
+2. Install and configure RouteLLM:
 
-Add RouteLLM to an MCP-capable host using the `routellm-mcp` command. For Codex:
+   ```powershell
+   git clone https://github.com/harshraj211/RouteLLM.git
+   cd RouteLLM
+   python -m pip install -e ".[dev]"
+   Copy-Item .env.example .env
+   ```
+
+3. Start the local gateway:
+
+   ```powershell
+   uvicorn routellm.main:app --reload
+   ```
+
+4. Point an OpenAI-compatible application at `http://localhost:8000/v1`:
+
+   ```python
+   from openai import OpenAI
+
+   client = OpenAI(base_url="http://localhost:8000/v1", api_key="local-not-used")
+   response = client.chat.completions.create(
+       model="routellm-auto",
+       messages=[{"role": "user", "content": "Fix this Python function and add tests."}],
+   )
+   print(response.choices[0].message.content)
+   ```
+
+For that coding request, RouteLLM selects `qwen2.5-coder:7b` through the local Ollama API.
+Use `http://localhost:8000/docs` to inspect the gateway API and `GET /v1/decisions` to audit
+model choices and estimated/actual usage.
+
+## Default Routing Policy
+
+| Task type | Default model | Provider cost |
+| --- | --- | --- |
+| General Q&A, classification, summaries, creative text | `qwen2.5:3b` | $0 API cost |
+| Code, structured output, math, research analysis, high-risk work | `qwen2.5-coder:7b` | $0 API cost |
+
+The actual models and endpoints are configurable in [models.yaml](config/models.yaml). Use
+the `ROUTELLM_OLLAMA_*` variables in `.env` if your machine has different local models.
+
+## Optional Cloud Escalation
+
+Cloud profiles are retained in [models.yaml](config/models.yaml) but ship with
+`enabled: false`. To allow a paid provider as a fallback, deliberately:
+
+1. Add its API key to the ignored `.env` file.
+2. Change only that model's `enabled` value to `true`.
+3. Set a per-request budget with `X-RouteLLM-Max-Budget-USD`.
+
+This makes every paid path opt-in and auditable. RouteLLM tracks selection, estimated cost,
+actual reported usage, latency, retries, and failover in its decision log.
+
+## Codex, Claude, and Other Agents
+
+The gateway can control inference only for clients that send their model requests through it.
+Codex's own built-in subscription model cannot currently be redirected or switched by an MCP
+tool. RouteLLM therefore provides an optional MCP task-policy companion, but that companion
+does not save Codex subscription credits by itself.
+
+Use the MCP server when you want local planning guidance in a compatible host:
 
 ```toml
 [mcp_servers.routellm]
 command = "routellm-mcp"
 ```
 
-See [the agent-native setup guide](docs/AGENT_NATIVE_SETUP.md) for host guidance and an
-example tool response.
+See [the agent-native setup guide](docs/AGENT_NATIVE_SETUP.md) for that optional integration.
 
-## Setup Plan
-
-Follow these steps once on each machine that will use RouteLLM.
-
-1. Install Python 3.12 or newer, then clone and install the repository:
-
-   ```powershell
-   git clone https://github.com/harshraj211/RouteLLM.git
-   cd RouteLLM
-   python -m pip install -e .
-   ```
-
-2. Verify the MCP server can load before configuring an agent host:
-
-   ```powershell
-   python -c "from routellm.agent_native.mcp_server import mcp; print(mcp.name)"
-   ```
-
-   Expected output: `RouteLLM`.
-
-3. Register the local stdio server in the host application. For Codex, add this entry to the
-   applicable Codex configuration and start a new task:
-
-   ```toml
-   [mcp_servers.routellm]
-   command = "routellm-mcp"
-   ```
-
-   For Claude Cowork, Antigravity, or another MCP host, register the same
-   `routellm-mcp` command through that product's MCP-server configuration screen.
-
-4. Confirm the host can see the `route_task` and `host_capabilities` tools. Ask the agent to
-   call `host_capabilities` with its host name, such as `codex`.
-
-5. Start using RouteLLM before non-trivial work. A prompt such as `Use RouteLLM to plan a
-   Python bug fix and tests` should produce a local policy with `execution_target` equal to
-   `current_agent`, `model_control` equal to `host_managed`, and no API-key requirement.
-
-6. If the tool is missing, restart the host after configuration changes and run step 2 again.
-   If step 2 fails, rerun `python -m pip install -e .` from the repository directory.
-
-RouteLLM's default mode needs no `.env` file, provider account, or model API key.
-
-## MCP Tools
-
-- `route_task`: returns a local task policy without calling a provider API.
-- `host_capabilities`: explains the supported integration boundary for a host.
-
-Supported host labels are `codex`, `claude_cowork`, `antigravity`, and `generic_mcp`.
-
-## Local-First Policy
-
-The default router is deterministic and runs in-process. It does not transmit prompts to a
-model provider, require API credentials, or estimate a paid provider bill. Its policy
-includes:
-
-- task intent
-- task depth: `quick`, `standard`, or `deep`
-- verification level
-- suggested tool categories
-- explainable reason codes
-
-## Advanced Inference Proxy
-
-The repository still includes the original FastAPI/OpenAI-compatible proxy, local vLLM
-adapters, provider failover, budget enforcement, routing logs, and evaluation harness. Those
-components are now optional advanced mode for users who deliberately run local models or
-bring provider API credentials.
-
-```powershell
-uvicorn routellm.main:app --reload
-```
-
-The proxy defaults to mock mode. Review `.env.example` before enabling live inference.
-
-## Development
+## Verification
 
 ```powershell
 python -m pytest
