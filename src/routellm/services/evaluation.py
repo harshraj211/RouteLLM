@@ -1,4 +1,5 @@
 import json
+import re
 
 from routellm.schemas.evaluation import EvaluationResult
 from routellm.schemas.models import ModelDescriptor
@@ -28,6 +29,9 @@ class ResponseEvaluator:
         if len(response_text.strip()) >= 32:
             confidence += 0.05
             reason_codes.append("RESPONSE_LENGTH_PLAUSIBLE")
+        elif self._expects_brief_response(request) and response_text.strip():
+            confidence += 0.05
+            reason_codes.append("BRIEF_RESPONSE_EXPECTED")
         else:
             confidence -= 0.25
             reason_codes.append("RESPONSE_TOO_SHORT")
@@ -50,4 +54,14 @@ class ResponseEvaluator:
             accepted=accepted,
             confidence_score=round(min(confidence, 0.99), 2),
             reason_codes=reason_codes,
+        )
+
+    @staticmethod
+    def _expects_brief_response(request: RouteRequest) -> bool:
+        prompt = " ".join(
+            message.content for message in request.messages if message.role == "user"
+        ).strip().lower()
+        return bool(
+            re.search(r"\b(say|reply|respond)(?:\s+with)?\b", prompt)
+            or re.search(r"\b(one word|short answer|briefly|only)\b", prompt)
         )

@@ -60,3 +60,14 @@ def test_evaluator_accepts_valid_substantive_json() -> None:
     assert result.accepted is True
     assert "JSON_OUTPUT_VALID" in result.reason_codes
     assert "EARLY_EXIT_ACCEPTED" in result.reason_codes
+
+
+def test_evaluator_accepts_intentionally_brief_response() -> None:
+    request = _request()
+    request.messages = [Message(role="user", content="Say OK!")]
+
+    result = ResponseEvaluator().evaluate(request, _model(), "OK!")
+
+    assert result.accepted is True
+    assert "BRIEF_RESPONSE_EXPECTED" in result.reason_codes
+    assert "ESCALATION_RECOMMENDED" not in result.reason_codes
