@@ -43,7 +43,7 @@ class ExecutionService:
                     timeout_seconds=settings.inference_timeout_seconds,
                 ),
                 "ollama": OllamaInferenceAdapter(
-                    timeout_seconds=settings.inference_timeout_seconds,
+                    timeout_seconds=settings.ollama_inference_timeout_seconds,
                 ),
             }
 

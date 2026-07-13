@@ -61,6 +61,10 @@ For that coding request, RouteLLM selects `qwen2.5-coder:7b` through the local O
 Use `http://localhost:8000/docs` to inspect the gateway API and `GET /v1/decisions` to audit
 model choices and estimated/actual usage.
 
+The local coder model may take longer than 30 seconds on its first request, especially on a
+CPU-only machine. RouteLLM therefore gives Ollama a separate 120-second timeout by default.
+Set `ROUTELLM_OLLAMA_INFERENCE_TIMEOUT_SECONDS` in `.env` to adjust it.
+
 ## Control Room
 
 Open `http://localhost:8000/dashboard` while the gateway is running. The local dashboard
